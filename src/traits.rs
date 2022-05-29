@@ -17,6 +17,9 @@ where
 }
 
 /// Read/write a shared value and emit change notifications on write.
+///
+/// Publishers are not aware of how many [`Subscriber`]s are connected
+/// that are observing changes.
 pub trait Publisher<'r, T, R, S>: Readable<'r, R>
 where
     R: Deref<Target = T> + 'r,

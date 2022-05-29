@@ -15,10 +15,7 @@ pub fn new_pubsub<T>(initial_value: T) -> (Publisher<T>, Subscriber<T>) {
     (Publisher { tx }, Subscriber { rx })
 }
 
-/// Modify a shared value and emit change notifications.
-///
-/// The publisher is not aware of how many [`Subscriber`]s are
-/// observing the changes.
+/// [`crate::traits::Publisher`]
 #[derive(Debug)]
 pub struct Publisher<T> {
     tx: watch::Sender<T>,
@@ -62,7 +59,7 @@ impl<'r, T> crate::traits::Readable<'r, Ref<'r, T>> for Publisher<T> {
     }
 }
 
-/// Observe a shared value.
+/// [`crate::traits::Subscriber`]
 #[derive(Debug, Clone)]
 pub struct Subscriber<T> {
     rx: watch::Receiver<T>,

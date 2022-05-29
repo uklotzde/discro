@@ -1,6 +1,6 @@
 //! discro
 //!
-//! Discrete observables for *Functional Reactive Programming* (FRP).
+//! Discrete observables for asynchronous *Functional Reactive Programming* (FRP).
 
 #![warn(rust_2018_idioms)]
 #![warn(rust_2021_compatibility)]
@@ -16,7 +16,7 @@
 
 use thiserror::Error;
 
-/// Generic traits
+/// Generic traits.
 pub mod traits;
 
 /// Re-export all traits in their unnameable form for convenience.
@@ -25,7 +25,7 @@ pub mod traits;
 /// as it is only provided for documentation purposes.
 pub mod prelude {
     #[allow(unreachable_pub)]
-    pub use crate::traits::{Readable as _, Publisher as _, Subscriber as _};
+    pub use crate::traits::{Publisher as _, Readable as _, Subscriber as _};
 }
 
 /// Indicates that the publisher has been dropped.
