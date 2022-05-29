@@ -4,10 +4,12 @@
 
 use std::ops::Deref;
 
-use thiserror::Error;
+use async_trait::async_trait;
 use tokio::sync::watch;
 
-/// Create a [`Publisher`]/[`Subscriber`] pair.
+use super::OrphanedError;
+
+/// Create a [`Publisher`] with an initial [`Subscriber`].
 pub fn new_pubsub<T>(initial_value: T) -> (Publisher<T>, Subscriber<T>) {
     let (tx, rx) = watch::channel(initial_value);
     (Publisher { tx }, Subscriber { rx })
@@ -22,20 +24,14 @@ pub struct Publisher<T> {
     tx: watch::Sender<T>,
 }
 
-impl<T> Publisher<T> {
-    /// Create a new [`Subscriber`] connected to this publisher.
-    #[must_use]
-    pub fn subscribe(&self) -> Subscriber<T> {
+impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
+    fn subscribe(&self) -> Subscriber<T> {
         Subscriber {
             rx: self.tx.subscribe(),
         }
     }
 
-    /// Replace the current value and emit a change notification.
-    ///
-    /// The change notification is emitted unconditionally, i.e.
-    /// independent of both the current and the new value.
-    pub fn write(&self, new_value: impl Into<T>) {
+    fn write(&self, new_value: impl Into<T>) {
         // Sender::send() would prematurely abort and fail if
         // no senders are connected and the current value would
         // not be replaced as expected. Therefore we have to use
@@ -44,27 +40,24 @@ impl<T> Publisher<T> {
     }
 
     #[cfg(feature = "tokio-send_if_modified")]
-    #[cfg_attr(channel = "nightly", doc(cfg(feature = "tokio-send_if_modified")))]
-    /// Modify the current value in-place and conditionally emit a
-    /// change notification.
-    ///
-    /// The mutable borrow of the current value is protected by
-    /// a write lock during the execution scope of the `modify`
-    /// closure.
-    ///
-    /// The result of the invoked `modify` closure controls if
-    /// a change notification is sent or not. This result is
-    /// passed through and then returned.
-    pub fn modify<M>(&self, modify: M) -> bool
+    fn modify<M>(&self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool,
     {
         self.tx.send_if_modified(modify)
     }
 
-    /// Obtain a reference to the most recently sent value.
-    #[must_use]
-    pub fn read(&self) -> Ref<'_, T> {
+    #[cfg(not(feature = "tokio-send_if_modified"))]
+    fn modify<M>(&self, _modify: M) -> bool
+    where
+        M: FnOnce(&mut T) -> bool,
+    {
+        todo!("requires tokio v0.19.0");
+    }
+}
+
+impl<'r, T> crate::traits::Readable<'r, Ref<'r, T>> for Publisher<T> {
+    fn read(&self) -> Ref<'_, T> {
         Ref(self.tx.borrow())
     }
 }
@@ -75,34 +68,33 @@ pub struct Subscriber<T> {
     rx: watch::Receiver<T>,
 }
 
-/// Indicates that the publisher has been dropped.
-#[derive(Error, Debug)]
-#[error(transparent)]
-pub struct OrphanedError(#[from] watch::error::RecvError);
-
 impl<T> Subscriber<T> {
-    /// Receive change notifications.
-    ///
-    /// Waits for a change notification, then marks the newest value as seen.
-    ///
-    /// # Errors
-    ///
-    /// Returns `Err(OrphanedError)` if the subscriber is disconnected form the publisher.
+    #[allow(clippy::missing_errors_doc)]
+    /// Non-boxing implementation of [`crate::traits::ChangeListener::changed()`]
     pub async fn changed(&mut self) -> Result<(), OrphanedError> {
-        self.rx.changed().await.map_err(OrphanedError)
+        self.rx.changed().await.map_err(|_| OrphanedError)
     }
+}
 
-    /// Obtain a borrowed reference to the most recently sent value.
-    #[must_use]
-    pub fn read(&self) -> Ref<'_, T> {
+impl<'r, T> crate::traits::Readable<'r, Ref<'r, T>> for Subscriber<T> {
+    fn read(&self) -> Ref<'_, T> {
         Ref(self.rx.borrow())
     }
+}
 
-    /// Obtain a borrowed reference to the most recently sent value and mark that
-    /// value as seen by acknowledging it.
-    #[must_use]
-    pub fn read_ack(&mut self) -> Ref<'_, T> {
+impl<'r, T> crate::traits::Subscriber<'r, T, Ref<'r, T>> for Subscriber<T> {
+    fn read_ack(&mut self) -> Ref<'_, T> {
         Ref(self.rx.borrow_and_update())
+    }
+}
+
+#[async_trait]
+impl<T> crate::traits::ChangeListener for Subscriber<T>
+where
+    T: Send + Sync,
+{
+    async fn changed(&mut self) -> Result<(), OrphanedError> {
+        self.changed().await
     }
 }
 
