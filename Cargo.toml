@@ -25,3 +25,9 @@ default = []
 tokio = ["dep:tokio"]
 # Temporary workaround until tokio v0.19.0 is released
 tokio-send_if_modified = ["tokio"]
+
+# Customize the docs.rs build
+# https://docs.rs/about/metadata
+[package.metadata.docs.rs]
+features = ["tokio"]
+rustdoc-args = ["--cfg", "docs_rs"]

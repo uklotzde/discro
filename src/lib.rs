@@ -33,9 +33,9 @@ pub mod prelude {
 pub struct OrphanedError;
 
 #[cfg(feature = "tokio")]
-#[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
+#[cfg_attr(docs_rs, doc(cfg(feature = "tokio")))]
 mod tokio;
 
 #[cfg(feature = "tokio")]
-#[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
+#[cfg_attr(docs_rs, doc(cfg(feature = "tokio")))]
 pub use self::tokio::*;
