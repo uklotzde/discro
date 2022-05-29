@@ -2,6 +2,8 @@
 //! opionionated API comprising of more recognizable function names
 //! and hiding of unneeded features.
 
+use std::ops::Deref;
+
 use thiserror::Error;
 use tokio::sync::watch;
 
@@ -19,11 +21,6 @@ pub fn new_pubsub<T>(initial_value: T) -> (Publisher<T>, Subscriber<T>) {
 pub struct Publisher<T> {
     tx: watch::Sender<T>,
 }
-
-/// A borrowed reference to the shared value.
-///
-/// <https://docs.rs/tokio/latest/tokio/sync/watch/struct.Ref.html>
-pub type Ref<'a, T> = watch::Ref<'a, T>;
 
 impl<T> Publisher<T> {
     /// Create a new [`Subscriber`] connected to this publisher.
@@ -65,13 +62,9 @@ impl<T> Publisher<T> {
     }
 
     /// Obtain a reference to the most recently sent value.
-    ///
-    /// Outstanding borrows hold a read lock.
-    ///
-    /// <https://docs.rs/tokio/latest/tokio/sync/watch/struct.Sender.html#method.borrow>
     #[must_use]
     pub fn peek(&self) -> Ref<'_, T> {
-        self.tx.borrow()
+        Ref(self.tx.borrow())
     }
 }
 
@@ -91,8 +84,6 @@ impl<T> Subscriber<T> {
     ///
     /// Waits for a change notification, then marks the newest value as seen.
     ///
-    /// <https://docs.rs/tokio/latest/tokio/sync/watch/struct.Receiver.html#method.changed>
-    ///
     /// # Errors
     ///
     /// Returns `Err(OrphanedError)` if the subscriber is disconnected form the publisher.
@@ -101,22 +92,28 @@ impl<T> Subscriber<T> {
     }
 
     /// Obtain a borrowed reference to the most recently sent value.
-    ///
-    /// Outstanding borrows hold a read lock.
-    ///
-    /// <https://docs.rs/tokio/latest/tokio/sync/watch/struct.Receiver.html#method.borrow>
     #[must_use]
     pub fn peek(&self) -> Ref<'_, T> {
-        self.rx.borrow()
+        Ref(self.rx.borrow())
     }
 
     /// Obtain a borrowed reference to the most recently sent value and mark that value as seen.
-    ///
-    /// Outstanding borrows hold a read lock.
-    ///
-    /// <https://docs.rs/tokio/latest/tokio/sync/watch/struct.Receiver.html#method.borrow_and_update>
     #[must_use]
     pub fn take(&mut self) -> Ref<'_, T> {
-        self.rx.borrow_and_update()
+        Ref(self.rx.borrow_and_update())
+    }
+}
+
+/// A borrowed reference to the shared value.
+///
+/// Outstanding borrows hold a read lock.
+#[derive(Debug)]
+pub struct Ref<'r, T>(watch::Ref<'r, T>);
+
+impl<'r, T> Deref for Ref<'r, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
     }
 }
