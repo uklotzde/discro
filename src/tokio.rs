@@ -35,7 +35,7 @@ impl<T> Publisher<T> {
     ///
     /// The change notification is emitted unconditionally, i.e.
     /// independent of both the current and the new value.
-    pub fn update(&self, new_value: impl Into<T>) {
+    pub fn write(&self, new_value: impl Into<T>) {
         // Sender::send() would prematurely abort and fail if
         // no senders are connected and the current value would
         // not be replaced as expected. Therefore we have to use
@@ -64,7 +64,7 @@ impl<T> Publisher<T> {
 
     /// Obtain a reference to the most recently sent value.
     #[must_use]
-    pub fn peek(&self) -> Ref<'_, T> {
+    pub fn read(&self) -> Ref<'_, T> {
         Ref(self.tx.borrow())
     }
 }
@@ -94,13 +94,14 @@ impl<T> Subscriber<T> {
 
     /// Obtain a borrowed reference to the most recently sent value.
     #[must_use]
-    pub fn peek(&self) -> Ref<'_, T> {
+    pub fn read(&self) -> Ref<'_, T> {
         Ref(self.rx.borrow())
     }
 
-    /// Obtain a borrowed reference to the most recently sent value and mark that value as seen.
+    /// Obtain a borrowed reference to the most recently sent value and mark that
+    /// value as seen by acknowledging it.
     #[must_use]
-    pub fn take(&mut self) -> Ref<'_, T> {
+    pub fn read_ack(&mut self) -> Ref<'_, T> {
         Ref(self.rx.borrow_and_update())
     }
 }
