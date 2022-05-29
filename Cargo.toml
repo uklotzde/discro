@@ -1,0 +1,25 @@
+[package]
+name = "discro"
+description = "Discrete Observables for Functional Reactive Programming (FRP)"
+version = "0.0.0"
+license = "MPL-2.0"
+readme = "README.md"
+repository = "https://github.com/uklotzde/discro"
+keywords = ["async", "await", "reactive", "observable", "synchronization"]
+categories = ["asynchronous", "concurrency"]
+edition = "2021"
+
+[patch.crates-io]
+# TODO: Remove after v1.19.0 has been released
+tokio = { git = "https://github.com/uklotzde/tokio", branch = "tokio-1.18.x-send_if_modified" }
+
+[dependencies]
+thiserror = "1.0.31"
+tokio = { version = "1.18.2", optional = true, default-features = false, features = ["sync"] }
+
+[features]
+# Currently only an implementation based on tokio::sync.:watch is provided
+default = ["tokio"]
+tokio = ["dep:tokio"]
+# Temporary workaround that allows publishing the crate
+tokio-send_if_modified = []
