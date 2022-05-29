@@ -28,8 +28,7 @@ jobs:
           toolchain: stable
           profile: minimal
 
-      # Cache key depends on Rust toolchain!
-      - name: 'Cache Rust build artifacts'
+      - name: Cache Rust toolchain and build artifacts
         uses: Swatinem/rust-cache@v1
 
       - name: Generate Cargo.lock
