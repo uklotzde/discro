@@ -12,6 +12,7 @@
 #![warn(rustdoc::broken_intra_doc_links)]
 #![cfg_attr(not(test), deny(clippy::panic_in_result_fn))]
 #![cfg_attr(not(debug_assertions), deny(clippy::used_underscore_binding))]
+#![cfg_attr(docs_rs, feature(doc_cfg))]
 
 use thiserror::Error;
 
