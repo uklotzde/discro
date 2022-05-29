@@ -43,6 +43,7 @@ impl<T> Publisher<T> {
         self.tx.send_modify(|value| *value = new_value.into());
     }
 
+    #[cfg_attr(channel = "nightly", doc(cfg(feature = "tokio-send_if_modified")))]
     #[cfg(feature = "tokio-send_if_modified")]
     /// Modify the current value in-place and conditionally emit a
     /// change notification.

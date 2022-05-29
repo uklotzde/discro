@@ -15,11 +15,12 @@ tokio = { git = "https://github.com/uklotzde/tokio", branch = "tokio-v1.18.x-sen
 
 [dependencies]
 thiserror = "1.0.31"
-tokio = { version = "1.18.2", optional = true, default-features = false, features = ["sync"] }
+tokio = { version = "1.18.2", optional = true, default-features = false, features = [
+    "sync",
+] }
 
 [features]
-# Currently only an implementation based on tokio::sync.:watch is provided
-default = ["tokio"]
+default = []
 tokio = ["dep:tokio"]
-# Temporary workaround that allows publishing the crate
-tokio-send_if_modified = []
+# Temporary workaround until tokio v0.19.0 is released
+tokio-send_if_modified = ["tokio"]
