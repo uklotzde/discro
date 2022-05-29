@@ -34,7 +34,10 @@ impl<T> Publisher<T> {
         }
     }
 
-    /// Replace the current value.
+    /// Replace the current value and emit a change notification.
+    ///
+    /// The change notification is emitted unconditionally, i.e.
+    /// independent of both the current and the new value.
     pub fn update(&self, new_value: impl Into<T>) {
         // Sender::send() would prematurely abort and fail if
         // no senders are connected and the current value would
@@ -44,10 +47,16 @@ impl<T> Publisher<T> {
     }
 
     #[cfg(feature = "tokio-send_if_modified")]
-    /// Modify the current value conditionally in-place.
+    /// Modify the current value in-place and conditionally emit a
+    /// change notification.
     ///
     /// The mutable borrow of the current value is protected by
-    /// a write lock during the execution scope of `modify()`.
+    /// a write lock during the execution scope of the `modify`
+    /// closure.
+    ///
+    /// The result of the invoked `modify` closure controls if
+    /// a change notification is sent or not. This result is
+    /// passed through and then returned.
     pub fn modify<M>(&self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool,
@@ -56,6 +65,8 @@ impl<T> Publisher<T> {
     }
 
     /// Obtain a reference to the most recently sent value.
+    ///
+    /// Outstanding borrows hold a read lock.
     ///
     /// <https://docs.rs/tokio/latest/tokio/sync/watch/struct.Sender.html#method.borrow>
     #[must_use]
