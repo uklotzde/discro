@@ -8,3 +8,15 @@
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
 Discrete observables for asynchronous *Functional Reactive Programming* (FRP).
+
+## Licensing
+
+Copyright (c) 2022 [Uwe Klotz](https://github.com/uklotzde)
+
+Licensed under the Mozilla Public License 2.0 ([LICENSE](LICENSE) or <https://www.mozilla.org/MPL/2.0/>).
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in `discro` by you, as defined in the MPL-2.0 license,
+shall be licensed as above, without any additional terms or conditions.
