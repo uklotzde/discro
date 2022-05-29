@@ -37,9 +37,11 @@ impl<T> Publisher<T> {
 
     /// Replace the current value.
     pub fn update(&self, new_value: impl Into<T>) {
-        // Silently ignore any errors provided by `watch::Sender` to
-        // mimic the behavior of `modify()`.
-        self.tx.send(new_value.into()).ok();
+        // Sender::send() would prematurely abort and fail if
+        // no senders are connected and the current value would
+        // not be replaced as expected. Therefore we have to use
+        // Sender::send_modify() here!
+        self.tx.send_modify(|value| *value = new_value.into());
     }
 
     #[cfg(feature = "tokio-send_if_modified")]
