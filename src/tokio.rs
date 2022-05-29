@@ -104,7 +104,7 @@ impl<T> Subscriber<T> {
     ///
     /// Outstanding borrows hold a read lock.
     ///
-    /// <https://docs.rs/tokio/latest/tokio/sync/watch/struct.Sender.html#method.borrow>
+    /// <https://docs.rs/tokio/latest/tokio/sync/watch/struct.Receiver.html#method.borrow>
     #[must_use]
     pub fn peek(&self) -> Ref<'_, T> {
         self.rx.borrow()
@@ -114,7 +114,7 @@ impl<T> Subscriber<T> {
     ///
     /// Outstanding borrows hold a read lock.
     ///
-    /// <https://docs.rs/tokio/latest/tokio/sync/watch/struct.Sender.html#method.borrow_and_update>
+    /// <https://docs.rs/tokio/latest/tokio/sync/watch/struct.Receiver.html#method.borrow_and_update>
     #[must_use]
     pub fn take(&mut self) -> Ref<'_, T> {
         self.rx.borrow_and_update()
