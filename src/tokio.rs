@@ -11,17 +11,16 @@ pub fn new_pubsub<T>(initial_value: T) -> (Publisher<T>, Subscriber<T>) {
     (Publisher { tx }, Subscriber { rx })
 }
 
-/// Publish changes of a value.
+/// Modify a shared value and emit change notifications.
 ///
-/// The publisher should not be aware of how many receivers are
-/// listening. If all receivers have already been dropped then
-/// any updates or modifications will disappwar into the void.
+/// The publisher is not aware of how many [`Subscriber`]s are
+/// observing the changes.
 #[derive(Debug)]
 pub struct Publisher<T> {
     tx: watch::Sender<T>,
 }
 
-/// A borrowed reference to the observed value.
+/// A borrowed reference to the shared value.
 ///
 /// <https://docs.rs/tokio/latest/tokio/sync/watch/struct.Ref.html>
 pub type Ref<'a, T> = watch::Ref<'a, T>;
@@ -65,6 +64,7 @@ impl<T> Publisher<T> {
     }
 }
 
+/// Observe a shared value.
 #[derive(Debug, Clone)]
 pub struct Subscriber<T> {
     rx: watch::Receiver<T>,
