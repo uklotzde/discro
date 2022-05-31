@@ -2,20 +2,26 @@
 //! opionionated API comprising of more recognizable function names
 //! and hiding of unneeded features.
 
+#![allow(missing_docs)]
+
 use std::ops::Deref;
 
 use async_trait::async_trait;
 use tokio::sync::watch;
 
-use super::OrphanedError;
+use super::OrphanedSubscriberError;
 
-/// Create a [`Publisher`] with an initial [`Subscriber`].
-pub fn new_pubsub<T>(initial_value: T) -> (Publisher<T>, Subscriber<T>) {
-    let (tx, rx) = watch::channel(initial_value);
-    (Publisher { tx }, Subscriber { rx })
+#[derive(Debug)]
+pub struct Ref<'r, T>(watch::Ref<'r, T>);
+
+impl<'r, T> Deref for Ref<'r, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
+    }
 }
 
-/// [`crate::traits::Publisher`]
 #[derive(Debug)]
 pub struct Publisher<T> {
     tx: watch::Sender<T>,
@@ -59,7 +65,6 @@ impl<'r, T> crate::traits::Readable<'r, Ref<'r, T>> for Publisher<T> {
     }
 }
 
-/// [`crate::traits::Subscriber`]
 #[derive(Debug, Clone)]
 pub struct Subscriber<T> {
     rx: watch::Receiver<T>,
@@ -68,8 +73,8 @@ pub struct Subscriber<T> {
 impl<T> Subscriber<T> {
     #[allow(clippy::missing_errors_doc)]
     /// Non-boxing implementation of [`crate::traits::ChangeListener::changed()`]
-    pub async fn changed(&mut self) -> Result<(), OrphanedError> {
-        self.rx.changed().await.map_err(|_| OrphanedError)
+    pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
+        self.rx.changed().await.map_err(|_| OrphanedSubscriberError)
     }
 }
 
@@ -90,21 +95,12 @@ impl<T> crate::traits::ChangeListener for Subscriber<T>
 where
     T: Send + Sync,
 {
-    async fn changed(&mut self) -> Result<(), OrphanedError> {
+    async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
         self.changed().await
     }
 }
 
-/// A borrowed reference to the shared value.
-///
-/// Outstanding borrows hold a read lock.
-#[derive(Debug)]
-pub struct Ref<'r, T>(watch::Ref<'r, T>);
-
-impl<'r, T> Deref for Ref<'r, T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &*self.0
-    }
+pub fn new_pubsub<T>(initial_value: T) -> (Publisher<T>, Subscriber<T>) {
+    let (tx, rx) = watch::channel(initial_value);
+    (Publisher { tx }, Subscriber { rx })
 }

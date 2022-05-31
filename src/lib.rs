@@ -12,31 +12,23 @@
 #![warn(rustdoc::broken_intra_doc_links)]
 #![cfg_attr(not(test), deny(clippy::panic_in_result_fn))]
 #![cfg_attr(not(debug_assertions), deny(clippy::used_underscore_binding))]
-#![cfg_attr(docs_rs, feature(doc_cfg))]
 
 use thiserror::Error;
 
-/// Generic traits.
-pub mod traits;
+mod docs;
 
-/// Re-export all traits in their unnameable form for convenience.
-///
-/// The async trait [`crate::traits::ChangeListener`] is not re-exported
-/// as it is only provided for documentation purposes.
-pub mod prelude {
-    #[allow(unreachable_pub)]
-    pub use crate::traits::{Publisher as _, Readable as _, Subscriber as _};
-}
+#[cfg(not(any(feature = "tokio")))]
+pub use self::docs::*;
+
+mod traits;
 
 /// Indicates that the publisher has been dropped.
 #[derive(Error, Debug)]
 #[error("disconnected from publisher")]
-pub struct OrphanedError;
+pub struct OrphanedSubscriberError;
 
 #[cfg(feature = "tokio")]
-#[cfg_attr(docs_rs, doc(cfg(feature = "tokio")))]
 mod tokio;
 
 #[cfg(feature = "tokio")]
-#[cfg_attr(docs_rs, doc(cfg(feature = "tokio")))]
 pub use self::tokio::*;

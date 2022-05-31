@@ -31,7 +31,7 @@ setup:
 upgrade:
     RUST_BACKTRACE=1 cargo upgrade --workspace
     cargo update
-    cargo minimal-versions check --workspace
+    #cargo minimal-versions check --workspace
 
 # Run pre-commit hooks
 pre-commit:
