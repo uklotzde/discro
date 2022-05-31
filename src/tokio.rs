@@ -27,14 +27,15 @@ pub struct Publisher<T> {
     tx: watch::Sender<T>,
 }
 
-impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
-    fn subscribe(&self) -> Subscriber<T> {
+impl<T> Publisher<T> {
+    #[must_use]
+    pub fn subscribe(&self) -> Subscriber<T> {
         Subscriber {
             rx: self.tx.subscribe(),
         }
     }
 
-    fn write(&self, new_value: impl Into<T>) {
+    pub fn write(&self, new_value: impl Into<T>) {
         // Sender::send() would prematurely abort and fail if
         // no senders are connected and the current value would
         // not be replaced as expected. Therefore we have to use
@@ -43,7 +44,7 @@ impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publi
     }
 
     #[cfg(feature = "tokio-send_if_modified")]
-    fn modify<M>(&self, modify: M) -> bool
+    pub fn modify<M>(&self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool,
     {
@@ -51,17 +52,41 @@ impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publi
     }
 
     #[cfg(not(feature = "tokio-send_if_modified"))]
-    fn modify<M>(&self, _modify: M) -> bool
+    #[allow(clippy::missing_panics_doc)]
+    #[allow(clippy::unused_self)]
+    pub fn modify<M>(&self, _modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool,
     {
         todo!("requires tokio v0.19.0");
     }
+
+    #[must_use]
+    pub fn read(&self) -> Ref<'_, T> {
+        Ref(self.tx.borrow())
+    }
+}
+
+impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
+    fn subscribe(&self) -> Subscriber<T> {
+        self.subscribe()
+    }
+
+    fn write(&self, new_value: impl Into<T>) {
+        self.write(new_value);
+    }
+
+    fn modify<M>(&self, modify: M) -> bool
+    where
+        M: FnOnce(&mut T) -> bool,
+    {
+        self.modify(modify)
+    }
 }
 
 impl<'r, T> crate::traits::Readable<'r, Ref<'r, T>> for Publisher<T> {
     fn read(&self) -> Ref<'_, T> {
-        Ref(self.tx.borrow())
+        self.read()
     }
 }
 
@@ -71,8 +96,17 @@ pub struct Subscriber<T> {
 }
 
 impl<T> Subscriber<T> {
+    #[must_use]
+    pub fn read(&self) -> Ref<'_, T> {
+        Ref(self.rx.borrow())
+    }
+
+    #[must_use]
+    pub fn read_ack(&mut self) -> Ref<'_, T> {
+        Ref(self.rx.borrow_and_update())
+    }
+
     #[allow(clippy::missing_errors_doc)]
-    /// Non-boxing implementation of [`crate::traits::ChangeListener::changed()`]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
         self.rx.changed().await.map_err(|_| OrphanedSubscriberError)
     }
@@ -80,13 +114,13 @@ impl<T> Subscriber<T> {
 
 impl<'r, T> crate::traits::Readable<'r, Ref<'r, T>> for Subscriber<T> {
     fn read(&self) -> Ref<'_, T> {
-        Ref(self.rx.borrow())
+        self.read()
     }
 }
 
 impl<'r, T> crate::traits::Subscriber<'r, T, Ref<'r, T>> for Subscriber<T> {
     fn read_ack(&mut self) -> Ref<'_, T> {
-        Ref(self.rx.borrow_and_update())
+        self.read_ack()
     }
 }
 
