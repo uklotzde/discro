@@ -43,22 +43,11 @@ impl<T> Publisher<T> {
         self.tx.send_modify(|value| *value = new_value.into());
     }
 
-    #[cfg(feature = "tokio-send_if_modified")]
     pub fn modify<M>(&self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool,
     {
         self.tx.send_if_modified(modify)
-    }
-
-    #[cfg(not(feature = "tokio-send_if_modified"))]
-    #[allow(clippy::missing_panics_doc)]
-    #[allow(clippy::unused_self)]
-    pub fn modify<M>(&self, _modify: M) -> bool
-    where
-        M: FnOnce(&mut T) -> bool,
-    {
-        todo!("requires tokio v0.19.0");
     }
 
     #[must_use]

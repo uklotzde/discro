@@ -11,13 +11,11 @@ fmt:
 check:
     cargo clippy --locked --workspace --no-deps --all-targets -- -D warnings --cap-lints warn
     cargo clippy --locked --workspace --no-deps --all-targets --features tokio -- -D warnings --cap-lints warn
-    cargo clippy --locked --workspace --no-deps --all-targets --features tokio-send_if_modified -- -D warnings --cap-lints warn
 
 # Run unit tests
 test:
     RUST_BACKTRACE=1 cargo test --locked --workspace -- --nocapture
     RUST_BACKTRACE=1 cargo test --locked --workspace --features tokio -- --nocapture
-    RUST_BACKTRACE=1 cargo test --locked --workspace --features tokio-send_if_modified -- --nocapture
 
 # Set up (and update) tooling
 setup:
