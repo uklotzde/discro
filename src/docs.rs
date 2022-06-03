@@ -89,7 +89,7 @@ impl<T> Subscriber<T> {
         unimplemented!()
     }
 
-    /// Obtain a borrowed reference to the most recently sent value and mark that
+    /// Obtain a reference to the most recent value and mark that
     /// value as seen by acknowledging it.
     ///
     /// Outstanding borrows hold a read lock.
