@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+
 //! This module is only provided for creating the documentation.
 
 #![allow(dead_code)]

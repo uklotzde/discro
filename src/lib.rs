@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+
 //! discro
 //!
 //! Discrete observables for asynchronous *Functional Reactive Programming* (FRP).
