@@ -26,6 +26,14 @@ impl<T> Deref for Ref<T> {
 ///
 /// Publishers are not aware of how many [`Subscriber`]s are connected
 /// who are observing changes.
+///
+/// All methods borrow `self` immutably to allow sharing a [`Publisher`]
+/// safely between threads. Only a single instance is supported, i.e.
+/// `Clone` is probably not implemented.
+///
+/// If more than one instance is needed in different contexts with independent
+/// lifetimes then the single instance could be shared by wrapping it into
+/// `Rc` or `Arc`.
 #[allow(missing_debug_implementations)]
 pub struct Publisher<T> {
     phantom_data: PhantomData<T>,
