@@ -102,9 +102,17 @@ impl<T> Subscriber<T> {
     /// Obtain a reference to the most recent value and mark that
     /// value as seen by acknowledging it.
     ///
+    /// Returns a tuple with the borrowed value and a *changed flag*
+    /// that indicates if changes have been detected and acknowledged.
+    ///
+    /// Callers must be prepared to handle *false positive* results, i.e.
+    /// the *changed flag* returns `true` even though the shared value
+    /// has not been modified. The accuracy of the *changed flag* depends
+    /// on the underlying implementation.
+    ///
     /// Outstanding borrows hold a read lock.
     #[must_use]
-    pub fn read_ack(&mut self) -> Ref<T> {
+    pub fn read_ack(&mut self) -> (Ref<T>, bool) {
         unimplemented!()
     }
 

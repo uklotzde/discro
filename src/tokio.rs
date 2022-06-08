@@ -93,8 +93,15 @@ impl<T> Subscriber<T> {
     }
 
     #[must_use]
-    pub fn read_ack(&mut self) -> Ref<'_, T> {
-        Ref(self.rx.borrow_and_update())
+    pub fn read_ack(&mut self) -> (Ref<'_, T>, bool) {
+        // FIXME: Replace with borrow_and_update_if_changed() after the
+        // following PR has been accepted and released with a new version:
+        // <https://github.com/tokio-rs/tokio/pull/4758>
+        let borrowed = Ref(self.rx.borrow_and_update());
+        // We cannot determine if the internal version has been updated
+        // or not and must assume that the value might have changed.
+        let maybe_changed = true;
+        (borrowed, maybe_changed)
     }
 
     #[allow(clippy::missing_errors_doc)]
@@ -110,7 +117,7 @@ impl<'r, T> crate::traits::Readable<'r, Ref<'r, T>> for Subscriber<T> {
 }
 
 impl<'r, T> crate::traits::Subscriber<'r, T, Ref<'r, T>> for Subscriber<T> {
-    fn read_ack(&mut self) -> Ref<'_, T> {
+    fn read_ack(&mut self) -> (Ref<'_, T>, bool) {
         self.read_ack()
     }
 }

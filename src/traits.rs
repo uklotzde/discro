@@ -39,7 +39,7 @@ where
     R: Deref<Target = T> + 'r,
 {
     #[must_use]
-    fn read_ack(&'r mut self) -> R;
+    fn read_ack(&'r mut self) -> (R, bool);
 }
 
 #[async_trait]
