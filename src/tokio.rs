@@ -8,7 +8,6 @@
 
 use std::ops::Deref;
 
-use async_trait::async_trait;
 use tokio::sync::watch;
 
 use super::OrphanedSubscriberError;
@@ -58,29 +57,6 @@ impl<T> Publisher<T> {
     }
 }
 
-impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
-    fn subscribe(&self) -> Subscriber<T> {
-        self.subscribe()
-    }
-
-    fn write(&self, new_value: impl Into<T>) {
-        self.write(new_value);
-    }
-
-    fn modify<M>(&self, modify: M) -> bool
-    where
-        M: FnOnce(&mut T) -> bool,
-    {
-        self.modify(modify)
-    }
-}
-
-impl<'r, T> crate::traits::Readable<'r, Ref<'r, T>> for Publisher<T> {
-    fn read(&self) -> Ref<'_, T> {
-        self.read()
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Subscriber<T> {
     rx: watch::Receiver<T>,
@@ -110,29 +86,61 @@ impl<T> Subscriber<T> {
     }
 }
 
-impl<'r, T> crate::traits::Readable<'r, Ref<'r, T>> for Subscriber<T> {
-    fn read(&self) -> Ref<'_, T> {
-        self.read()
-    }
-}
-
-impl<'r, T> crate::traits::Subscriber<'r, T, Ref<'r, T>> for Subscriber<T> {
-    fn read_ack(&mut self) -> (Ref<'_, T>, bool) {
-        self.read_ack()
-    }
-}
-
-#[async_trait]
-impl<T> crate::traits::ChangeListener for Subscriber<T>
-where
-    T: Send + Sync,
-{
-    async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
-        self.changed().await
-    }
-}
-
 pub fn new_pubsub<T>(initial_value: T) -> (Publisher<T>, Subscriber<T>) {
     let (tx, rx) = watch::channel(initial_value);
     (Publisher { tx }, Subscriber { rx })
+}
+
+#[cfg(test)]
+mod traits {
+    use async_trait::async_trait;
+
+    use crate::OrphanedSubscriberError;
+
+    use super::{Publisher, Ref, Subscriber};
+
+    impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
+        fn subscribe(&self) -> Subscriber<T> {
+            self.subscribe()
+        }
+
+        fn write(&self, new_value: impl Into<T>) {
+            self.write(new_value);
+        }
+
+        fn modify<M>(&self, modify: M) -> bool
+        where
+            M: FnOnce(&mut T) -> bool,
+        {
+            self.modify(modify)
+        }
+    }
+
+    impl<'r, T> crate::traits::Readable<'r, Ref<'r, T>> for Publisher<T> {
+        fn read(&self) -> Ref<'_, T> {
+            self.read()
+        }
+    }
+
+    impl<'r, T> crate::traits::Readable<'r, Ref<'r, T>> for Subscriber<T> {
+        fn read(&self) -> Ref<'_, T> {
+            self.read()
+        }
+    }
+
+    impl<'r, T> crate::traits::Subscriber<'r, T, Ref<'r, T>> for Subscriber<T> {
+        fn read_ack(&mut self) -> (Ref<'_, T>, bool) {
+            self.read_ack()
+        }
+    }
+
+    #[async_trait]
+    impl<T> crate::traits::ChangeListener for Subscriber<T>
+    where
+        T: Send + Sync,
+    {
+        async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
+            self.changed().await
+        }
+    }
 }

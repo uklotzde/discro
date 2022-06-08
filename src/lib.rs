@@ -27,6 +27,7 @@ mod docs;
 #[cfg(not(any(feature = "tokio")))]
 pub use self::docs::*;
 
+#[cfg(test)]
 mod traits;
 
 /// Indicates that the publisher has been dropped.
