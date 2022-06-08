@@ -93,7 +93,8 @@ pub struct Subscriber<T> {
 impl<T> Subscriber<T> {
     /// Obtain a reference to the most recent value.
     ///
-    /// Outstanding borrows hold a read lock.
+    /// Outstanding borrows hold a read lock. Trying to read the value
+    /// again while already holding a read lock might cause a deadlock!
     #[must_use]
     pub fn read(&self) -> Ref<T> {
         unimplemented!()
@@ -110,7 +111,8 @@ impl<T> Subscriber<T> {
     /// has not been modified. The accuracy of the *changed flag* depends
     /// on the underlying implementation.
     ///
-    /// Outstanding borrows hold a read lock.
+    /// Outstanding borrows hold a read lock. Trying to read the value
+    /// again while already holding a read lock might cause a deadlock!
     #[must_use]
     pub fn read_ack(&mut self) -> (Ref<T>, bool) {
         unimplemented!()
