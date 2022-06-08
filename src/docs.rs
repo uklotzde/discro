@@ -106,7 +106,7 @@ impl<T> Subscriber<T> {
     /// that indicates if changes have been detected and acknowledged.
     ///
     /// Callers must be prepared to handle *false positive* results, i.e.
-    /// the *changed flag* returns `true` even though the shared value
+    /// if the *changed flag* returns `true` even though the shared value
     /// has not been modified. The accuracy of the *changed flag* depends
     /// on the underlying implementation.
     ///

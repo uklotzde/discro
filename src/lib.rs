@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: MPL-2.0
 
-//! discro
-//!
 //! Discrete observables for asynchronous *Functional Reactive Programming* (FRP).
+//!
+//! ## Crate Features
+//!
+//! One of the following (mutually exclusive) features must be enabled to select
+//! a concrete implementation:
+//!
+//! - `tokio` implementation based on [`tokio::sync::watch`](https://docs.rs/tokio/latest/tokio/sync/watch/)
 
 #![warn(rust_2018_idioms)]
 #![warn(rust_2021_compatibility)]
