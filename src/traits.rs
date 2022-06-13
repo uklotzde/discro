@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: The discro authors
 // SPDX-License-Identifier: MPL-2.0
 
 //! Generic traits for verifying that implementations are compliant.

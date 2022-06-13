@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: The discro authors
+# SPDX-License-Identifier: CC0-1.0
+
 # Only add deviations from the default settings!
 
 # Consistently use a single edition for all workspace crates, should match Cargo.toml

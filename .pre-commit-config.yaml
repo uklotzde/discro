@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: The discro authors
+# SPDX-License-Identifier: CC0-1.0
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.2.0
@@ -46,6 +49,11 @@ repos:
             -D,
             warnings,
           ]
+  # https://reuse.software
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v1.0.0
+    hooks:
+      - id: reuse
   - repo: local
     hooks:
       - id: cargo-doc

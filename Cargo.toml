@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: The discro authors
+# SPDX-License-Identifier: CC0-1.0
+
 [package]
 name = "discro"
 description = "Discrete Observables for asynchronous Functional Reactive Programming (FRP)"

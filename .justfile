@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: The discro authors
+# SPDX-License-Identifier: CC0-1.0
+
 # just manual: https://github.com/casey/just/#readme
 
 _default:

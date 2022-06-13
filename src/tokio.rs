@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: The discro authors
 // SPDX-License-Identifier: MPL-2.0
 
 //! Shallow wrapper around [`tokio::sync::watch`] primitives with an
