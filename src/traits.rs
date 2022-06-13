@@ -10,17 +10,22 @@ use async_trait::async_trait;
 
 use super::OrphanedSubscriberError;
 
-pub(crate) trait Readable<'r, R>
+pub(crate) trait Ref<T>: AsRef<T> + Deref<Target = T> {
+    #[must_use]
+    fn has_changed(&self) -> Option<bool>;
+}
+
+pub(crate) trait Readable<'r, T, R>
 where
-    R: 'r,
+    R: Ref<T> + 'r,
 {
     #[must_use]
     fn read(&'r self) -> R;
 }
 
-pub(crate) trait Publisher<'r, T, R, S>: Readable<'r, R>
+pub(crate) trait Publisher<'r, T, R, S>: Readable<'r, T, R>
 where
-    R: Deref<Target = T> + 'r,
+    R: Ref<T> + 'r,
     S: Subscriber<'r, T, R>,
 {
     #[must_use]
@@ -34,12 +39,12 @@ where
 }
 
 /// Read a shared value.
-pub(crate) trait Subscriber<'r, T, R>: Readable<'r, R>
+pub(crate) trait Subscriber<'r, T, R>: Readable<'r, T, R>
 where
-    R: Deref<Target = T> + 'r,
+    R: Ref<T> + 'r,
 {
     #[must_use]
-    fn read_ack(&'r mut self) -> (R, bool);
+    fn read_ack(&'r mut self) -> R;
 }
 
 #[async_trait]

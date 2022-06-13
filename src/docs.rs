@@ -14,13 +14,37 @@ use super::OrphanedSubscriberError;
 ///
 /// Outstanding borrows hold a read lock.
 #[derive(Debug)]
-pub struct Ref<T>(T);
+pub struct Ref<T> {
+    phantom: PhantomData<T>,
+}
+
+impl<T> Ref<T> {
+    /// Query the *change* status
+    ///
+    /// Returns `Some(true)` if the the shared value behind this reference
+    /// is considered as *changed* or `Some(false)` if unchanged. The status
+    /// is determined when borrowing the reference, i.e. after acquiring the
+    /// read lock.
+    ///
+    /// Depending on the implementation or how the reference has been obtained
+    /// the *change* status might be unknown and `None` is returned.
+    #[must_use]
+    pub fn has_changed(&self) -> Option<bool> {
+        unimplemented!();
+    }
+}
+
+impl<T> AsRef<T> for Ref<T> {
+    fn as_ref(&self) -> &T {
+        unimplemented!();
+    }
+}
 
 impl<T> Deref for Ref<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        unimplemented!();
     }
 }
 
@@ -38,7 +62,7 @@ impl<T> Deref for Ref<T> {
 /// `Rc` or `Arc`.
 #[allow(missing_debug_implementations)]
 pub struct Publisher<T> {
-    phantom_data: PhantomData<T>,
+    phantom: PhantomData<T>,
 }
 
 impl<T> Publisher<T> {
@@ -87,7 +111,7 @@ impl<T> Publisher<T> {
 /// Read a shared value and receive change notifications asynchronously.
 #[allow(missing_debug_implementations)]
 pub struct Subscriber<T> {
-    phantom_data: PhantomData<T>,
+    phantom: PhantomData<T>,
 }
 
 impl<T> Subscriber<T> {
@@ -114,7 +138,7 @@ impl<T> Subscriber<T> {
     /// Outstanding borrows hold a read lock. Trying to read the value
     /// again while already holding a read lock might cause a deadlock!
     #[must_use]
-    pub fn read_ack(&mut self) -> (Ref<T>, bool) {
+    pub fn read_ack(&mut self) -> Ref<T> {
         unimplemented!()
     }
 
