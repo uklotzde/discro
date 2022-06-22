@@ -3,7 +3,7 @@
 
 [package]
 name = "discro"
-description = "Discrete Observables for asynchronous Functional Reactive Programming (FRP)"
+description = "DISCRete Observables for asynchronous Functional Reactive Programming (FRP)."
 version = "0.4.0"
 license = "MPL-2.0"
 readme = "README.md"
