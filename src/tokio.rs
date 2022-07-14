@@ -19,11 +19,7 @@ pub struct Ref<'r, T>(watch::Ref<'r, T>);
 impl<'r, T> Ref<'r, T> {
     #[must_use]
     pub fn has_changed(&self) -> Option<bool> {
-        // FIXME: Replace with `Some(self.0.has_changed())` after
-        // <https://github.com/tokio-rs/tokio/pull/4758>
-        // has been merged and released.
-        let _suppress_unused_self_warning_until_implemented = &*self.0.deref();
-        None
+        Some(self.0.has_changed())
     }
 }
 
