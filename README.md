@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: The discro authors -->
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+
 # discro
 
 [![Crates.io](https://img.shields.io/crates/v/discro.svg)](https://crates.io/crates/discro)
