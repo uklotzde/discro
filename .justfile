@@ -31,9 +31,7 @@ setup:
 # Upgrade (and update) dependencies
 upgrade:
     cargo update
-    cargo upgrade --workspace
-    cargo update
-    #cargo minimal-versions check --workspace
+    cargo upgrade --to-lockfile
 
 # Run pre-commit hooks
 pre-commit:
