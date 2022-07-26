@@ -41,3 +41,5 @@ mod tokio;
 
 #[cfg(feature = "tokio")]
 pub use self::tokio::*;
+
+pub mod tasklet;
