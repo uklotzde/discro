@@ -59,8 +59,8 @@ pub async fn observe_changes<T>(
 ///
 /// The `on_changed` closure is invoked at least once when the tasklet
 /// is started and then again after each change. No locks are held
-/// during an invocation. It must return `true` to continue and `false`
-/// to abort the task.
+/// during an invocation. The returned `OnChanged` enum determines whether
+/// to continue or abort listening for subsequent changes.
 pub async fn capture_changes<S, T>(
     mut subscriber: Subscriber<S>,
     mut capture: impl FnMut(&S) -> T,
