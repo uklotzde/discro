@@ -7,6 +7,16 @@ use std::future::Future;
 
 use crate::Subscriber;
 
+/// Continuation after handling a change notification.
+#[derive(Debug, Clone, Copy)]
+pub enum OnChanged {
+    /// Continue listening for changes
+    Continue,
+
+    /// Abort listening for changes
+    Abort,
+}
+
 /// Observe a shared value.
 ///
 /// The `on_changed` closure is invoked at least once when the tasklet
@@ -18,12 +28,15 @@ use crate::Subscriber;
 /// holding locks across yield points is not permitted.
 pub async fn observe_changes<T>(
     mut subscriber: Subscriber<T>,
-    mut on_changed: impl FnMut(&T) -> bool,
+    mut on_changed: impl FnMut(&T) -> OnChanged,
 ) {
     loop {
-        if !on_changed(&*subscriber.read_ack()) {
-            // Aborted by consumer
-            return;
+        match on_changed(&*subscriber.read_ack()) {
+            OnChanged::Continue => (),
+            OnChanged::Abort => {
+                // Aborted by consumer
+                return;
+            }
         }
         if subscriber.changed().await.is_err() {
             // Publisher has disappeared
@@ -52,13 +65,16 @@ pub async fn capture_changes<S, T>(
     mut subscriber: Subscriber<S>,
     mut capture: impl FnMut(&S) -> T,
     mut has_changed: impl FnMut(&T, &S) -> bool,
-    mut on_changed: impl FnMut(&T) -> bool,
+    mut on_changed: impl FnMut(&T) -> OnChanged,
 ) {
     let mut value = capture(&*subscriber.read_ack());
     loop {
-        if !on_changed(&value) {
-            // Aborted by consumer
-            return;
+        match on_changed(&value) {
+            OnChanged::Continue => (),
+            OnChanged::Abort => {
+                // Aborted by consumer
+                return;
+            }
         }
         loop {
             if subscriber.changed().await.is_err() {
@@ -85,13 +101,16 @@ pub async fn capture_changes_async<S, T, F>(
     mut has_changed: impl FnMut(&T, &S) -> bool,
     mut on_changed: impl FnMut(&T) -> F,
 ) where
-    F: Future<Output = bool>,
+    F: Future<Output = OnChanged>,
 {
     let mut value = capture(&*subscriber.read_ack());
     loop {
-        if !on_changed(&value).await {
-            // Aborted by consumer
-            return;
+        match on_changed(&value).await {
+            OnChanged::Continue => (),
+            OnChanged::Abort => {
+                // Aborted by consumer
+                return;
+            }
         }
         loop {
             if subscriber.changed().await.is_err() {
