@@ -97,11 +97,13 @@ pub async fn capture_changes<S, T>(
 /// the `on_changed` closure returns a future with the result.
 pub async fn capture_changes_async<S, T, F>(
     mut subscriber: Subscriber<S>,
-    mut capture: impl FnMut(&S) -> T,
-    mut has_changed: impl FnMut(&T, &S) -> bool,
-    mut on_changed: impl FnMut(&T) -> F,
+    mut capture: impl FnMut(&S) -> T + Send + 'static,
+    mut has_changed: impl FnMut(&T, &S) -> bool + Send + 'static,
+    mut on_changed: impl FnMut(&T) -> F + Send + 'static,
 ) where
-    F: Future<Output = OnChanged>,
+    S: Send + Sync + 'static,
+    T: Send + Sync + 'static,
+    F: Future<Output = OnChanged> + Send + 'static,
 {
     let mut value = capture(&*subscriber.read_ack());
     loop {
