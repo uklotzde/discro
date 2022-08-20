@@ -22,14 +22,16 @@ test:
 
 # Set up (and update) tooling
 setup:
-    rustup self update
-    cargo install \
-        cargo-edit
+    # Ignore rustup failures, because not everyone might use it
+    rustup self update || true
+    # cargo-edit is needed for `cargo upgrade`
+    cargo install cargo-edit just
     pip install -U pre-commit
-    pre-commit autoupdate
+    pre-commit install --hook-type commit-msg --hook-type pre-commit
 
 # Upgrade (and update) dependencies
-upgrade:
+upgrade: setup
+    pre-commit autoupdate
     cargo upgrade
     cargo update
     cargo upgrade --to-lockfile
