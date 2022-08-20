@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
 //! Tasklets for processing observed values.
+//!
+//! Prefer to keep only weak references in tasklets that are
+//! upgraded on demand when the tasklet gets triggered.
 
 use std::future::Future;
 
@@ -127,4 +130,64 @@ pub async fn capture_changes_async<S, T, F>(
             }
         }
     }
+}
+
+/// Upgrade a weak reference or break.
+#[macro_export]
+macro_rules! upgrade_or_break {
+    ($var:ident) => {
+        if let Some($var) = $var.upgrade() {
+            $var
+        } else {
+            break;
+        }
+    };
+}
+
+/// Upgrade a weak reference or continue.
+#[macro_export]
+macro_rules! upgrade_or_continue {
+    ($var:ident) => {
+        if let Some($var) = $var.upgrade() {
+            $var
+        } else {
+            continue;
+        }
+    };
+}
+
+/// Upgrade a weak reference or return.
+#[macro_export]
+macro_rules! upgrade_or_return {
+    ($var:ident) => {
+        if let Some($var) = $var.upgrade() {
+            $var
+        } else {
+            return;
+        }
+    };
+}
+
+/// Upgrade a weak reference or abort the tasklet.
+#[macro_export]
+macro_rules! upgrade_or_return_abort {
+    ($var:ident) => {
+        if let Some($var) = $var.upgrade() {
+            $var
+        } else {
+            return discro::tasklet::OnChanged::Abort;
+        }
+    };
+}
+
+/// Upgrade a weak reference or continue the tasklet.
+#[macro_export]
+macro_rules! upgrade_or_return_continue {
+    ($var:ident) => {
+        if let Some($var) = $var.upgrade() {
+            $var
+        } else {
+            return discro::tasklet::OnChanged::Continue;
+        }
+    };
 }

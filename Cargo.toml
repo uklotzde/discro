@@ -4,7 +4,7 @@
 [package]
 name = "discro"
 description = "DISCRete Observables for asynchronous Functional Reactive Programming (FRP)."
-version = "0.7.1"
+version = "0.7.2"
 license = "MPL-2.0"
 readme = "README.md"
 repository = "https://github.com/uklotzde/discro"
