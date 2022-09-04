@@ -73,11 +73,22 @@ impl<T> Publisher<T> {
         unimplemented!()
     }
 
-    /// Replace the current value and emit a change notification.
+    /// Overwrite the current value with a new value
+    /// and emit a change notification.
     ///
     /// The change notification is emitted unconditionally, i.e.
     /// independent of both the current and the new value.
     pub fn write(&self, new_value: impl Into<T>) {
+        drop(new_value);
+        unimplemented!()
+    }
+
+    /// Replace and return the current value with a new value
+    /// and emit a change notification.
+    ///
+    /// The change notification is emitted unconditionally, i.e.
+    /// independent of both the current and the new value.
+    pub fn replace(&self, new_value: impl Into<T>) -> T {
         drop(new_value);
         unimplemented!()
     }

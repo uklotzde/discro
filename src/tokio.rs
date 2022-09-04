@@ -58,6 +58,10 @@ impl<T> Publisher<T> {
         self.tx.send_modify(|value| *value = new_value.into());
     }
 
+    pub fn replace(&self, new_value: impl Into<T>) -> T {
+        self.tx.send_replace(new_value.into())
+    }
+
     pub fn modify<M>(&self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool,
@@ -119,6 +123,10 @@ mod traits {
 
         fn write(&self, new_value: impl Into<T>) {
             self.write(new_value);
+        }
+
+        fn replace(&self, new_value: impl Into<T>) -> T {
+            self.replace(new_value)
         }
 
         fn modify<M>(&self, modify: M) -> bool

@@ -34,6 +34,8 @@ where
 
     fn write(&self, new_value: impl Into<T>);
 
+    fn replace(&self, new_value: impl Into<T>) -> T;
+
     fn modify<M>(&self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool;
