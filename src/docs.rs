@@ -161,6 +161,7 @@ impl<T> Subscriber<T> {
     /// # Errors
     ///
     /// Returns `Err(OrphanedSubscriberError)` if the subscriber is disconnected form the publisher.
+    #[allow(clippy::unused_async)]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
         unimplemented!()
     }
