@@ -13,13 +13,13 @@ categories = ["asynchronous", "concurrency"]
 edition = "2021"
 
 [dependencies]
-thiserror = "1.0"
-tokio = { version = "1.21", optional = true, default-features = false, features = [
+thiserror = "1.0.36"
+tokio = { version = "1.21.1", optional = true, default-features = false, features = [
     "sync",
 ] }
 
 [dev-dependencies]
-async-trait = "0.1"
+async-trait = "0.1.57"
 
 [features]
 default = []
