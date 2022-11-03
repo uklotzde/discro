@@ -25,7 +25,7 @@ impl<'r, T> Ref<'r, T> {
 
 impl<'r, T> AsRef<T> for Ref<'r, T> {
     fn as_ref(&self) -> &T {
-        &*self.0
+        &self.0
     }
 }
 
