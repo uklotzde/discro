@@ -10,7 +10,7 @@
 [![Continuous integration](https://github.com/uklotzde/discro/actions/workflows/continuous-integration.yaml/badge.svg)](https://github.com/uklotzde/discro/actions/workflows/continuous-integration.yaml)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
-Discrete observables for asynchronous *Functional Reactive Programming* (FRP).
+Discrete observables for asynchronous _Functional Reactive Programming_ (FRP).
 
 ## License
 
