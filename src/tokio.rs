@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 //! Shallow wrapper around [`tokio::sync::watch`] primitives with an
-//! opionionated API comprising of more recognizable function names
+//! opinionated API comprising of more recognizable function names
 //! and hiding of unneeded features.
 
 #![allow(missing_docs)]
