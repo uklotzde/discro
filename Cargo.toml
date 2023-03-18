@@ -11,15 +11,16 @@ repository = "https://github.com/uklotzde/discro"
 keywords = ["async", "await", "reactive", "observable", "synchronization"]
 categories = ["asynchronous", "concurrency"]
 edition = "2021"
+include = ["/src", "/README.md", "/LICENSES"]
 
 [dependencies]
-thiserror = "1.0.38"
-tokio = { version = "1.25.0", optional = true, default-features = false, features = [
+thiserror = "1.0.40"
+tokio = { version = "1.26.0", optional = true, default-features = false, features = [
     "sync",
 ] }
 
 [dev-dependencies]
-async-trait = "0.1.64"
+async-trait = "0.1.67"
 
 [features]
 default = []
