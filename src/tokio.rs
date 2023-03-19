@@ -106,9 +106,8 @@ pub fn new_pubsub<T>(initial_value: T) -> (Publisher<T>, Subscriber<T>) {
 mod traits {
     use async_trait::async_trait;
 
-    use crate::OrphanedSubscriberError;
-
     use super::{Publisher, Ref, Subscriber};
+    use crate::OrphanedSubscriberError;
 
     impl<T> crate::traits::Ref<T> for Ref<'_, T> {
         fn has_changed(&self) -> Option<bool> {
