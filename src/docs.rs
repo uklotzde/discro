@@ -154,13 +154,34 @@ impl<T> Subscriber<T> {
         unimplemented!()
     }
 
+    /// Receive filtered change notifications for the shared value.
+    ///
+    /// Waits for a change notification, then marks the newest value
+    /// as seen and returns a reference to it.
+    ///
+    /// When invoked the current value will be inspected first before
+    /// awaiting a new value. If the filter matches the current value
+    /// will be acknowledged and returned.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(OrphanedSubscriberError)` if the subscriber is disconnected from the publisher.
+    #[allow(clippy::unused_async)]
+    pub async fn wait_for(
+        &mut self,
+        filter_fn: impl FnMut(&T) -> bool,
+    ) -> Result<Ref<T>, OrphanedSubscriberError> {
+        drop(filter_fn);
+        unimplemented!()
+    }
+
     /// Receive change notifications for the shared value.
     ///
     /// Waits for a change notification, then marks the newest value as seen.
     ///
     /// # Errors
     ///
-    /// Returns `Err(OrphanedSubscriberError)` if the subscriber is disconnected form the publisher.
+    /// Returns `Err(OrphanedSubscriberError)` if the subscriber is disconnected from the publisher.
     #[allow(clippy::unused_async)]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
         unimplemented!()

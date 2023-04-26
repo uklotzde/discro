@@ -95,6 +95,18 @@ impl<T> Subscriber<T> {
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
         self.rx.changed().await.map_err(|_| OrphanedSubscriberError)
     }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn wait_for(
+        &mut self,
+        filter_fn: impl FnMut(&T) -> bool,
+    ) -> Result<Ref<'_, T>, OrphanedSubscriberError> {
+        self.rx
+            .wait_for(filter_fn)
+            .await
+            .map(Ref)
+            .map_err(|_| OrphanedSubscriberError)
+    }
 }
 
 pub fn new_pubsub<T>(initial_value: T) -> (Publisher<T>, Subscriber<T>) {
