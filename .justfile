@@ -11,7 +11,7 @@ fmt:
     cargo fmt --all
 
 # Run clippy
-check:
+clippy:
     cargo clippy --locked --workspace --no-deps --all-targets -- -D warnings --cap-lints warn
     cargo clippy --locked --workspace --no-deps --all-targets --features tokio -- -D warnings --cap-lints warn
 
@@ -27,7 +27,7 @@ setup:
     # cargo-edit is needed for `cargo upgrade`
     cargo install cargo-edit just
     pip install -U pre-commit
-    pre-commit install --hook-type commit-msg --hook-type pre-commit
+    #pre-commit install --hook-type commit-msg --hook-type pre-commit
 
 # Upgrade (and update) dependencies
 upgrade: setup

@@ -17,6 +17,7 @@
 #![warn(unreachable_pub)]
 #![warn(unsafe_code)]
 #![warn(clippy::pedantic)]
+#![warn(clippy::clone_on_ref_ptr)]
 #![warn(rustdoc::broken_intra_doc_links)]
 
 use thiserror::Error;
