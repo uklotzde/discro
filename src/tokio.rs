@@ -73,6 +73,27 @@ impl<T> Publisher<T> {
     pub fn read(&self) -> Ref<'_, T> {
         Ref(self.tx.borrow())
     }
+
+    /// Observe modifications.
+    ///
+    /// Returns a stream of cloned values, starting with the current value.
+    #[cfg(feature = "async-stream")]
+    pub fn observe(&self) -> impl futures_core::Stream<Item = T>
+    where
+        T: Clone,
+    {
+        let mut subscriber = self.subscribe();
+        async_stream::stream! {
+            loop {
+                let value = subscriber.read_ack().clone();
+                yield value;
+                if subscriber.changed().await.is_err() {
+                    // Stream exhausted after publisher disappeared
+                    break;
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
