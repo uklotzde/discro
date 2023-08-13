@@ -55,7 +55,7 @@ impl<T> Publisher<T> {
         // no senders are connected and the current value would
         // not be replaced as expected. Therefore we have to use
         // Sender::send_modify() here!
-        self.tx.send_modify(|value| *value = new_value.into());
+        self.tx.send_modify(move |value| *value = new_value.into());
     }
 
     pub fn replace(&self, new_value: impl Into<T>) -> T {
@@ -74,19 +74,17 @@ impl<T> Publisher<T> {
         Ref(self.tx.borrow())
     }
 
-    /// Observe modifications.
-    ///
-    /// Returns a stream of cloned values, starting with the current value.
     #[cfg(feature = "async-stream")]
-    pub fn observe(&self) -> impl futures_core::Stream<Item = T>
-    where
-        T: Clone,
-    {
+    pub fn observe<U>(
+        &self,
+        mut capture_fn: impl FnMut(&T) -> U,
+    ) -> impl futures_core::Stream<Item = U> {
+        // Canonical implementation, copied from the docs
         let mut subscriber = self.subscribe();
         async_stream::stream! {
             loop {
-                let value = subscriber.read_ack().clone();
-                yield value;
+                let captured_value = capture_fn(subscriber.read_ack().as_ref());
+                yield captured_value;
                 if subscriber.changed().await.is_err() {
                     // Stream exhausted after publisher disappeared
                     break;
