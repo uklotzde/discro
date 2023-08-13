@@ -44,6 +44,13 @@ pub struct Publisher<T> {
 
 impl<T> Publisher<T> {
     #[must_use]
+    pub fn new(initial_value: impl Into<T>) -> Self {
+        Self {
+            tx: watch::channel(initial_value.into()).0,
+        }
+    }
+
+    #[must_use]
     pub fn subscribe(&self) -> Subscriber<T> {
         Subscriber {
             rx: self.tx.subscribe(),

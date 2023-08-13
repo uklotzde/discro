@@ -67,6 +67,13 @@ pub struct Publisher<T> {
 }
 
 impl<T> Publisher<T> {
+    /// Create a new publisher without subscribers.
+    #[must_use]
+    pub fn new(initial_value: impl Into<T>) -> Self {
+        drop(initial_value);
+        unimplemented!()
+    }
+
     /// Create a new subscription that is connected to this publisher.
     #[must_use]
     pub fn subscribe(&self) -> Subscriber<T> {
