@@ -44,9 +44,9 @@ pub struct Publisher<T> {
 
 impl<T> Publisher<T> {
     #[must_use]
-    pub fn new(initial_value: impl Into<T>) -> Self {
+    pub fn new(initial_value: T) -> Self {
         Self {
-            tx: watch::channel(initial_value.into()).0,
+            tx: watch::channel(initial_value).0,
         }
     }
 
