@@ -51,6 +51,11 @@ impl<T> Publisher<T> {
     }
 
     #[must_use]
+    pub fn has_subscribers(&self) -> bool {
+        !self.tx.is_closed()
+    }
+
+    #[must_use]
     pub fn subscribe(&self) -> Subscriber<T> {
         Subscriber {
             rx: self.tx.subscribe(),
@@ -142,6 +147,10 @@ mod traits {
     }
 
     impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
+        fn has_subscribers(&self) -> bool {
+            self.has_subscribers()
+        }
+
         fn subscribe(&self) -> Subscriber<T> {
             self.subscribe()
         }

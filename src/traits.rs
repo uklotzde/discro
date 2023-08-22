@@ -30,6 +30,9 @@ where
     S: Subscriber<'r, T, R>,
 {
     #[must_use]
+    fn has_subscribers(&self) -> bool;
+
+    #[must_use]
     fn subscribe(&self) -> S;
 
     fn write(&self, new_value: impl Into<T>);

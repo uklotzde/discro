@@ -74,6 +74,15 @@ impl<T> Publisher<T> {
         unimplemented!()
     }
 
+    /// Check if the publisher has subscribers.
+    ///
+    /// Returns `true` if at least one subscriber is connected
+    /// or `false` if the publish is orphaned.
+    #[must_use]
+    pub fn has_subscribers(&self) -> bool {
+        unimplemented!()
+    }
+
     /// Create a new subscription that is connected to this publisher.
     #[must_use]
     pub fn subscribe(&self) -> Subscriber<T> {
