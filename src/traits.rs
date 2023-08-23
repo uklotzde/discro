@@ -44,7 +44,6 @@ where
         M: FnOnce(&mut T) -> bool;
 }
 
-/// Read a shared value.
 pub(crate) trait Subscriber<'r, T, R>: Readable<'r, T, R>
 where
     R: Ref<T> + 'r,

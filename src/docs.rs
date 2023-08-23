@@ -134,30 +134,6 @@ impl<T> Publisher<T> {
     pub fn read(&self) -> Ref<T> {
         unimplemented!()
     }
-
-    /// Observe modifications as a stream of captured values.
-    ///
-    /// The `capture_fn` closure is invoked on a borrowed value while the lock is held.
-    ///
-    /// Returns a stream of captured values, starting with the current value.
-    #[cfg(feature = "async-stream")]
-    pub fn observe<U>(
-        &self,
-        mut capture_fn: impl FnMut(&T) -> U,
-    ) -> impl futures_core::Stream<Item = U> {
-        // Canonical implementation
-        let mut subscriber = self.subscribe();
-        async_stream::stream! {
-            loop {
-                let captured_value = capture_fn(subscriber.read_ack().as_ref());
-                yield captured_value;
-                if subscriber.changed().await.is_err() {
-                    // Stream exhausted after publisher disappeared
-                    break;
-                }
-            }
-        }
-    }
 }
 
 /// Read a shared value and receive change notifications asynchronously.
@@ -204,6 +180,29 @@ impl<T> Subscriber<T> {
     #[allow(clippy::unused_async)]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
         unimplemented!()
+    }
+
+    /// Observe modifications as a stream of captured values.
+    ///
+    /// The `capture_fn` closure is invoked on a borrowed value while the lock is held.
+    ///
+    /// Returns a stream of captured values, starting with the current value.
+    #[cfg(feature = "async-stream")]
+    pub fn into_stream<U>(
+        self,
+        mut capture_fn: impl FnMut(&T) -> U,
+    ) -> impl futures_core::Stream<Item = U> {
+        async_stream::stream! {
+            let mut this = self;
+            loop {
+                let captured_value = capture_fn(this.read_ack().as_ref());
+                yield captured_value;
+                if this.changed().await.is_err() {
+                    // Stream exhausted after publisher disappeared
+                    break;
+                }
+            }
+        }
     }
 }
 

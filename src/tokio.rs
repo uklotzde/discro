@@ -85,25 +85,6 @@ impl<T> Publisher<T> {
     pub fn read(&self) -> Ref<'_, T> {
         Ref(self.tx.borrow())
     }
-
-    #[cfg(feature = "async-stream")]
-    pub fn observe<U>(
-        &self,
-        mut capture_fn: impl FnMut(&T) -> U,
-    ) -> impl futures_core::Stream<Item = U> {
-        // Canonical implementation, copied from the docs
-        let mut subscriber = self.subscribe();
-        async_stream::stream! {
-            loop {
-                let captured_value = capture_fn(subscriber.read_ack().as_ref());
-                yield captured_value;
-                if subscriber.changed().await.is_err() {
-                    // Stream exhausted after publisher disappeared
-                    break;
-                }
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -125,6 +106,24 @@ impl<T> Subscriber<T> {
     #[allow(clippy::missing_errors_doc)]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
         self.rx.changed().await.map_err(|_| OrphanedSubscriberError)
+    }
+
+    #[cfg(feature = "async-stream")]
+    pub fn into_stream<U>(
+        self,
+        mut capture_fn: impl FnMut(&T) -> U,
+    ) -> impl futures_core::Stream<Item = U> {
+        async_stream::stream! {
+            let mut this = self;
+            loop {
+                let captured_value = capture_fn(this.read_ack().as_ref());
+                yield captured_value;
+                if this.changed().await.is_err() {
+                    // Stream exhausted after publisher disappeared
+                    break;
+                }
+            }
+        }
     }
 }
 
