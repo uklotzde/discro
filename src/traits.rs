@@ -37,6 +37,7 @@ where
 
     fn write(&self, new_value: impl Into<T>);
 
+    #[must_use]
     fn replace(&self, new_value: impl Into<T>) -> T;
 
     fn modify<M>(&self, modify: M) -> bool

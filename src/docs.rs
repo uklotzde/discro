@@ -104,6 +104,9 @@ impl<T> Publisher<T> {
     ///
     /// The change notification is emitted unconditionally, i.e.
     /// independent of both the current and the new value.
+    ///
+    /// If you don't need the previous value, use [`write`](Self::write) instead.
+    #[must_use]
     pub fn replace(&self, new_value: impl Into<T>) -> T {
         drop(new_value);
         unimplemented!()

@@ -70,6 +70,7 @@ impl<T> Publisher<T> {
         self.tx.send_modify(move |value| *value = new_value.into());
     }
 
+    #[must_use]
     pub fn replace(&self, new_value: impl Into<T>) -> T {
         self.tx.send_replace(new_value.into())
     }
