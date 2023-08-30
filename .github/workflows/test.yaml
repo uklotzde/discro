@@ -3,7 +3,8 @@
 
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow
 
-name: build-and-test
+# Same as file name
+name: test
 
 permissions:
   contents: read
@@ -44,11 +45,6 @@ jobs:
       - name: Check WASM target with `tokio`
         run: >-
           cargo check --locked --features tokio --target wasm32-unknown-unknown
-
-      - name: Build tests with `tokio`
-        run: >-
-          cargo test --locked --features tokio
-          --no-run
 
       - name: Run tests with `tokio`
         run: >-
