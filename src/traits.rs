@@ -24,7 +24,7 @@ where
     fn read(&'r self) -> R;
 }
 
-pub(crate) trait Publisher<'r, T, R, S>: Readable<'r, T, R>
+pub(crate) trait ReadOnlyPublisher<'r, T, R, S>: Readable<'r, T, R>
 where
     R: Ref<T> + 'r,
     S: Subscriber<'r, T, R>,
@@ -34,13 +34,22 @@ where
 
     #[must_use]
     fn subscribe(&self) -> S;
+}
 
-    fn write(&self, new_value: impl Into<T>);
+pub(crate) trait Publisher<'r, T, R, S, P>: ReadOnlyPublisher<'r, T, R, S>
+where
+    R: Ref<T> + 'r,
+    P: ReadOnlyPublisher<'r, T, R, S>,
+    S: Subscriber<'r, T, R>,
+{
+    fn clone_read_only(&self) -> P;
+
+    fn write(&mut self, new_value: impl Into<T>);
 
     #[must_use]
-    fn replace(&self, new_value: impl Into<T>) -> T;
+    fn replace(&mut self, new_value: impl Into<T>) -> T;
 
-    fn modify<M>(&self, modify: M) -> bool
+    fn modify<M>(&mut self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool;
 }

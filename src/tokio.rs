@@ -7,7 +7,7 @@
 
 #![allow(missing_docs)]
 
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 
 use tokio::sync::watch;
 
@@ -37,16 +37,47 @@ impl<'r, T> Deref for Ref<'r, T> {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ReadOnlyPublisher<T> {
+    tx: Arc<watch::Sender<T>>,
+}
+
+impl<T> ReadOnlyPublisher<T> {
+    #[must_use]
+    pub fn has_subscribers(&self) -> bool {
+        !self.tx.is_closed()
+    }
+
+    #[must_use]
+    pub fn subscribe(&self) -> Subscriber<T> {
+        Subscriber {
+            rx: self.tx.subscribe(),
+        }
+    }
+
+    #[must_use]
+    pub fn read(&self) -> Ref<'_, T> {
+        Ref(self.tx.borrow())
+    }
+}
+
 #[derive(Debug)]
 pub struct Publisher<T> {
-    tx: watch::Sender<T>,
+    tx: Arc<watch::Sender<T>>,
 }
 
 impl<T> Publisher<T> {
     #[must_use]
     pub fn new(initial_value: T) -> Self {
         Self {
-            tx: watch::channel(initial_value).0,
+            tx: Arc::new(watch::channel(initial_value).0),
+        }
+    }
+
+    #[must_use]
+    pub fn clone_read_only(&self) -> ReadOnlyPublisher<T> {
+        ReadOnlyPublisher {
+            tx: Arc::clone(&self.tx),
         }
     }
 
@@ -62,7 +93,12 @@ impl<T> Publisher<T> {
         }
     }
 
-    pub fn write(&self, new_value: impl Into<T>) {
+    #[must_use]
+    pub fn read(&self) -> Ref<'_, T> {
+        Ref(self.tx.borrow())
+    }
+
+    pub fn write(&mut self, new_value: impl Into<T>) {
         // Sender::send() would prematurely abort and fail if
         // no senders are connected and the current value would
         // not be replaced as expected. Therefore we have to use
@@ -71,20 +107,15 @@ impl<T> Publisher<T> {
     }
 
     #[must_use]
-    pub fn replace(&self, new_value: impl Into<T>) -> T {
+    pub fn replace(&mut self, new_value: impl Into<T>) -> T {
         self.tx.send_replace(new_value.into())
     }
 
-    pub fn modify<M>(&self, modify: M) -> bool
+    pub fn modify<M>(&mut self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool,
     {
         self.tx.send_if_modified(modify)
-    }
-
-    #[must_use]
-    pub fn read(&self) -> Ref<'_, T> {
-        Ref(self.tx.borrow())
     }
 }
 
@@ -130,15 +161,27 @@ impl<T> Subscriber<T> {
 
 pub fn new_pubsub<T>(initial_value: T) -> (Publisher<T>, Subscriber<T>) {
     let (tx, rx) = watch::channel(initial_value);
-    (Publisher { tx }, Subscriber { rx })
+    (Publisher { tx: Arc::new(tx) }, Subscriber { rx })
 }
 
 #[cfg(test)]
 mod traits {
     use async_trait::async_trait;
 
-    use super::{Publisher, Ref, Subscriber};
+    use super::{Publisher, ReadOnlyPublisher, Ref, Subscriber};
     use crate::OrphanedSubscriberError;
+
+    // <https://github.com/rust-lang/api-guidelines/issues/223#issuecomment-683346783>
+    const _: () = {
+        const fn assert_send<T: Send>() {}
+        let _ = assert_send::<Publisher<i32>>;
+    };
+
+    // <https://github.com/rust-lang/api-guidelines/issues/223#issuecomment-683346783>
+    const _: () = {
+        const fn assert_sync<T: Sync>() {}
+        let _ = assert_sync::<Publisher<i32>>;
+    };
 
     impl<T> crate::traits::Ref<T> for Ref<'_, T> {
         fn has_changed(&self) -> Option<bool> {
@@ -146,7 +189,9 @@ mod traits {
         }
     }
 
-    impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
+    impl<'r, T> crate::traits::ReadOnlyPublisher<'r, T, Ref<'r, T>, Subscriber<T>>
+        for ReadOnlyPublisher<T>
+    {
         fn has_subscribers(&self) -> bool {
             self.has_subscribers()
         }
@@ -154,16 +199,40 @@ mod traits {
         fn subscribe(&self) -> Subscriber<T> {
             self.subscribe()
         }
+    }
 
-        fn write(&self, new_value: impl Into<T>) {
+    impl<'r, T> crate::traits::Readable<'r, T, Ref<'r, T>> for ReadOnlyPublisher<T> {
+        fn read(&self) -> Ref<'_, T> {
+            self.read()
+        }
+    }
+
+    impl<'r, T> crate::traits::ReadOnlyPublisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
+        fn has_subscribers(&self) -> bool {
+            self.has_subscribers()
+        }
+
+        fn subscribe(&self) -> Subscriber<T> {
+            self.subscribe()
+        }
+    }
+
+    impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>, ReadOnlyPublisher<T>>
+        for Publisher<T>
+    {
+        fn clone_read_only(&self) -> ReadOnlyPublisher<T> {
+            self.clone_read_only()
+        }
+
+        fn write(&mut self, new_value: impl Into<T>) {
             self.write(new_value);
         }
 
-        fn replace(&self, new_value: impl Into<T>) -> T {
+        fn replace(&mut self, new_value: impl Into<T>) -> T {
             self.replace(new_value)
         }
 
-        fn modify<M>(&self, modify: M) -> bool
+        fn modify<M>(&mut self, modify: M) -> bool
         where
             M: FnOnce(&mut T) -> bool,
         {
@@ -201,7 +270,7 @@ mod traits {
 
     #[test]
     fn ref_has_changed() {
-        let (tx, mut rx) = super::new_pubsub(0);
+        let (mut tx, mut rx) = super::new_pubsub(0);
 
         {
             let borrowed = rx.read_ack();

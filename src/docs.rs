@@ -49,31 +49,18 @@ impl<T> Deref for Ref<T> {
     }
 }
 
-/// Read/write a shared value and emit change notifications on write.
+/// Read-only projection of the [`Publisher`].
 ///
-/// Publishers are not aware of how many [`Subscriber`]s are connected
-/// who are observing changes.
+/// Could only be used for reading the current value or for subscribing.
 ///
-/// All methods borrow `self` immutably to allow sharing a [`Publisher`]
-/// safely between threads. Only a single instance is supported, i.e.
-/// `Clone` is probably not implemented.
-///
-/// If more than one instance is needed in different contexts with independent
-/// lifetimes then the single instance could be shared by wrapping it into
-/// `Rc` or `Arc`.
+/// Could be cloned to obtain multiple read-only projections.
+#[derive(Clone)]
 #[allow(missing_debug_implementations)]
-pub struct Publisher<T> {
+pub struct ReadOnlyPublisher<T> {
     phantom: PhantomData<T>,
 }
 
-impl<T> Publisher<T> {
-    /// Create a new publisher without subscribers.
-    #[must_use]
-    pub fn new(initial_value: T) -> Self {
-        drop(initial_value);
-        unimplemented!()
-    }
-
+impl<T> ReadOnlyPublisher<T> {
     /// Check if the publisher has subscribers.
     ///
     /// Returns `true` if at least one subscriber is connected
@@ -89,12 +76,63 @@ impl<T> Publisher<T> {
         unimplemented!()
     }
 
+    /// Obtain a reference to the most recent value.
+    ///
+    /// Outstanding borrows hold a read lock.
+    #[must_use]
+    pub fn read(&self) -> Ref<T> {
+        unimplemented!()
+    }
+}
+
+/// Read/write a shared value and emit change notifications on write.
+///
+/// All write methods require `&mut self` to ensure that only the owner
+/// of the publisher can modify the shared value.
+///
+/// Only a single instance is supported, i.e. `Clone` is probably not implemented.
+#[allow(missing_debug_implementations)]
+pub struct Publisher<T> {
+    phantom: PhantomData<T>,
+}
+
+impl<T> Publisher<T> {
+    /// Create a new publisher without subscribers.
+    #[must_use]
+    pub fn new(initial_value: T) -> Self {
+        drop(initial_value);
+        unimplemented!()
+    }
+
+    /// Create a new read-only publisher.
+    pub fn clone_read_only(&self) -> ReadOnlyPublisher<T> {
+        unimplemented!()
+    }
+
+    /// [`ReadOnlyPublisher::has_subscribers`]
+    #[must_use]
+    pub fn has_subscribers(&self) -> bool {
+        unimplemented!()
+    }
+
+    /// [`ReadOnlyPublisher::subscribe`]
+    #[must_use]
+    pub fn subscribe(&self) -> Subscriber<T> {
+        unimplemented!()
+    }
+
+    /// [`ReadOnlyPublisher::read`]
+    #[must_use]
+    pub fn read(&self) -> Ref<T> {
+        unimplemented!()
+    }
+
     /// Overwrite the current value with a new value
     /// and emit a change notification.
     ///
     /// The change notification is emitted unconditionally, i.e.
     /// independent of both the current and the new value.
-    pub fn write(&self, new_value: impl Into<T>) {
+    pub fn write(&mut self, new_value: impl Into<T>) {
         drop(new_value);
         unimplemented!()
     }
@@ -107,7 +145,7 @@ impl<T> Publisher<T> {
     ///
     /// If you don't need the previous value, use [`write`](Self::write) instead.
     #[must_use]
-    pub fn replace(&self, new_value: impl Into<T>) -> T {
+    pub fn replace(&mut self, new_value: impl Into<T>) -> T {
         drop(new_value);
         unimplemented!()
     }
@@ -122,19 +160,11 @@ impl<T> Publisher<T> {
     /// The result of the invoked `modify` closure controls if
     /// a change notification is sent or not. This result is
     /// finally returned.
-    pub fn modify<M>(&self, modify: M) -> bool
+    pub fn modify<M>(&mut self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool,
     {
         drop(modify);
-        unimplemented!()
-    }
-
-    /// Obtain a reference to the most recent value.
-    ///
-    /// Outstanding borrows hold a read lock.
-    #[must_use]
-    pub fn read(&self) -> Ref<T> {
         unimplemented!()
     }
 }
