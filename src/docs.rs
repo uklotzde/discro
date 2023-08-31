@@ -87,8 +87,9 @@ impl<T> ReadOnlyPublisher<T> {
 
 /// Read/write a shared value and emit change notifications on write.
 ///
-/// All write methods require `&mut self` to ensure that only the owner
-/// of the publisher can modify the shared value.
+/// All write methods operate on a borrowed reference `&self` and therefore require
+/// interior mutability. This allows to share the publisher across multiple threads
+/// and/or tasks by wrapping into an `Arc` without requiring explicit synchronization.
 ///
 /// Only a single instance is supported, i.e. `Clone` is probably not implemented.
 #[allow(missing_debug_implementations)]
@@ -133,7 +134,7 @@ impl<T> Publisher<T> {
     ///
     /// The change notification is emitted unconditionally, i.e.
     /// independent of both the current and the new value.
-    pub fn write(&mut self, new_value: impl Into<T>) {
+    pub fn write(&self, new_value: impl Into<T>) {
         drop(new_value);
         unimplemented!()
     }
@@ -146,7 +147,7 @@ impl<T> Publisher<T> {
     ///
     /// If you don't need the previous value, use [`write`](Self::write) instead.
     #[must_use]
-    pub fn replace(&mut self, new_value: impl Into<T>) -> T {
+    pub fn replace(&self, new_value: impl Into<T>) -> T {
         drop(new_value);
         unimplemented!()
     }
@@ -161,7 +162,7 @@ impl<T> Publisher<T> {
     /// The result of the invoked `modify` closure controls if
     /// a change notification is sent or not. This result is
     /// finally returned.
-    pub fn modify<M>(&mut self, modify: M) -> bool
+    pub fn modify<M>(&self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool,
     {

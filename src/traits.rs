@@ -44,12 +44,12 @@ where
 {
     fn clone_read_only(&self) -> P;
 
-    fn write(&mut self, new_value: impl Into<T>);
+    fn write(&self, new_value: impl Into<T>);
 
     #[must_use]
-    fn replace(&mut self, new_value: impl Into<T>) -> T;
+    fn replace(&self, new_value: impl Into<T>) -> T;
 
-    fn modify<M>(&mut self, modify: M) -> bool
+    fn modify<M>(&self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool;
 }

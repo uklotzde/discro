@@ -98,7 +98,7 @@ impl<T> Publisher<T> {
         Ref(self.tx.borrow())
     }
 
-    pub fn write(&mut self, new_value: impl Into<T>) {
+    pub fn write(&self, new_value: impl Into<T>) {
         // Sender::send() would prematurely abort and fail if
         // no senders are connected and the current value would
         // not be replaced as expected. Therefore we have to use
@@ -107,11 +107,11 @@ impl<T> Publisher<T> {
     }
 
     #[must_use]
-    pub fn replace(&mut self, new_value: impl Into<T>) -> T {
+    pub fn replace(&self, new_value: impl Into<T>) -> T {
         self.tx.send_replace(new_value.into())
     }
 
-    pub fn modify<M>(&mut self, modify: M) -> bool
+    pub fn modify<M>(&self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool,
     {
@@ -281,15 +281,15 @@ mod traits {
             self.clone_read_only()
         }
 
-        fn write(&mut self, new_value: impl Into<T>) {
+        fn write(&self, new_value: impl Into<T>) {
             self.write(new_value);
         }
 
-        fn replace(&mut self, new_value: impl Into<T>) -> T {
+        fn replace(&self, new_value: impl Into<T>) -> T {
             self.replace(new_value)
         }
 
-        fn modify<M>(&mut self, modify: M) -> bool
+        fn modify<M>(&self, modify: M) -> bool
         where
             M: FnOnce(&mut T) -> bool,
         {
@@ -327,7 +327,7 @@ mod traits {
 
     #[test]
     fn ref_has_changed() {
-        let (mut tx, mut rx) = super::new_pubsub(0);
+        let (tx, mut rx) = super::new_pubsub(0);
 
         {
             let borrowed = rx.read_ack();
