@@ -105,6 +105,7 @@ impl<T> Publisher<T> {
     }
 
     /// Create a new read-only publisher.
+    #[must_use]
     pub fn clone_read_only(&self) -> ReadOnlyPublisher<T> {
         unimplemented!()
     }
