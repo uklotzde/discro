@@ -218,6 +218,23 @@ impl<T> Subscriber<T> {
 
     /// Observe modifications as a stream of captured values.
     ///
+    /// Returns a stream of captured values, starting with the current value.
+    ///
+    /// The `capture_fn` closure is invoked on a borrowed value while the lock is held.
+    #[cfg(feature = "async-stream")]
+    pub fn into_stream<U>(
+        self,
+        mut capture_fn: impl FnMut(&T) -> U,
+    ) -> impl futures::Stream<Item = U> {
+        // Minimal, non-working dummy implementation to satisfy the compiler.
+        async_stream::stream! {
+            let captured = capture_fn(self.read().as_ref());
+            yield captured;
+        }
+    }
+
+    /// Observe modifications as a stream of captured values.
+    ///
     /// Returns a stream of captured values, starting with the current value or the
     /// first value for which `capture_fn` returns `Some(_)`.
     ///
@@ -225,13 +242,13 @@ impl<T> Subscriber<T> {
     /// Returning `Some(value)` from the closure will emit `value` on the stream.
     /// Returning `None` will skip the value and wait for the next change notification.
     #[cfg(feature = "async-stream")]
-    pub fn into_stream<U>(
+    pub fn into_stream_or_skip<U>(
         self,
-        mut capture_fn: impl FnMut(&T) -> Option<U>,
+        mut capture_or_skip_fn: impl FnMut(&T) -> Option<U>,
     ) -> impl futures::Stream<Item = U> {
         // Minimal, non-working dummy implementation to satisfy the compiler.
         async_stream::stream! {
-            let Some(captured) = capture_fn(self.read().as_ref()) else {
+            let Some(captured) = capture_or_skip_fn(self.read().as_ref()) else {
                 return;
             };
             yield captured;

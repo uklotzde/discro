@@ -143,15 +143,34 @@ impl<T> Subscriber<T> {
     #[cfg(feature = "async-stream")]
     pub fn into_stream<U>(
         self,
-        mut capture_fn: impl FnMut(&T) -> Option<U>,
+        mut capture_fn: impl FnMut(&T) -> U,
     ) -> impl futures::Stream<Item = U> {
         async_stream::stream! {
             let mut this = self;
             loop {
-                let Some(captured_value) = capture_fn(this.read_ack().as_ref()) else {
+                let captured = capture_fn(this.read_ack().as_ref());
+                yield captured;
+                if this.changed().await.is_err() {
+                    // Stream exhausted after publisher disappeared
+                    return;
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "async-stream")]
+    pub fn into_stream_or_skip<U>(
+        self,
+        mut capture_or_skip_fn: impl FnMut(&T) -> Option<U>,
+    ) -> impl futures::Stream<Item = U> {
+        async_stream::stream! {
+            let mut this = self;
+            loop {
+                let Some(captured) = capture_or_skip_fn(this.read_ack().as_ref()) else {
+                    // Skip value
                     continue;
                 };
-                yield captured_value;
+                yield captured;
                 if this.changed().await.is_err() {
                     // Stream exhausted after publisher disappeared
                     return;
