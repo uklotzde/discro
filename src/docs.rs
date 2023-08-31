@@ -218,17 +218,23 @@ impl<T> Subscriber<T> {
     /// Observe modifications as a stream of captured values.
     ///
     /// The `capture_fn` closure is invoked on a borrowed value while the lock is held.
+    /// Returning `Some(value)` from the closure will emit `value` on the stream.
+    /// Returning `None` will skip the value and wait for the next change notification.
     ///
-    /// Returns a stream of captured values, starting with the current value.
+    /// Returns a stream of captured values, starting with the current value or the
+    /// first value for which `capture_fn` returns `Some(_)`.
     #[cfg(feature = "async-stream")]
     pub fn into_stream<U>(
         self,
-        mut capture_fn: impl FnMut(&T) -> U,
+        mut capture_fn: impl FnMut(&T) -> Option<U>,
     ) -> impl futures_core::Stream<Item = U> {
         async_stream::stream! {
+            // Canonical implementation
             let mut this = self;
             loop {
-                let captured_value = capture_fn(this.read_ack().as_ref());
+                let Some(captured_value) = capture_fn(this.read_ack().as_ref()) else {
+                    continue;
+                };
                 yield captured_value;
                 if this.changed().await.is_err() {
                     // Stream exhausted after publisher disappeared

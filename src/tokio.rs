@@ -143,12 +143,14 @@ impl<T> Subscriber<T> {
     #[cfg(feature = "async-stream")]
     pub fn into_stream<U>(
         self,
-        mut capture_fn: impl FnMut(&T) -> U,
+        mut capture_fn: impl FnMut(&T) -> Option<U>,
     ) -> impl futures_core::Stream<Item = U> {
         async_stream::stream! {
             let mut this = self;
             loop {
-                let captured_value = capture_fn(this.read_ack().as_ref());
+                let Some(captured_value) = capture_fn(this.read_ack().as_ref()) else {
+                    continue;
+                };
                 yield captured_value;
                 if this.changed().await.is_err() {
                     // Stream exhausted after publisher disappeared
