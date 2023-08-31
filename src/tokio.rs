@@ -144,7 +144,7 @@ impl<T> Subscriber<T> {
     pub fn into_stream<U>(
         self,
         mut capture_fn: impl FnMut(&T) -> Option<U>,
-    ) -> impl futures_core::Stream<Item = U> {
+    ) -> impl futures::Stream<Item = U> {
         async_stream::stream! {
             let mut this = self;
             loop {
@@ -154,7 +154,43 @@ impl<T> Subscriber<T> {
                 yield captured_value;
                 if this.changed().await.is_err() {
                     // Stream exhausted after publisher disappeared
-                    break;
+                    return;
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "async-stream")]
+    pub fn into_stream_or_defer<U, R>(
+        self,
+        mut capture_or_defer_fn: impl FnMut(&T) -> Result<U, R>,
+    ) -> impl futures::Stream<Item = U>
+    where
+        R: std::future::Future<Output = ()>,
+    {
+        async_stream::stream! {
+            let mut this = self;
+            loop {
+                let defer = match capture_or_defer_fn(this.read_ack().as_ref()) {
+                    Ok(captured) => {
+                        yield captured;
+                        // Unconditionally wait for the next change notification,
+                        // i.e. defer forever.
+                        futures::future::Either::Left(std::future::pending())
+                    }
+                    Err(defer) => {
+                        // Don't yield and defer instead.
+                        futures::future::Either::Right(defer)
+                    }
+                };
+                futures::select! {
+                    _ = futures::FutureExt::fuse(defer) => (),
+                    changed = futures::FutureExt::fuse(this.changed()) => {
+                        if changed.is_err() {
+                            // Stream exhausted after publisher disappeared
+                            return;
+                        }
+                    }
                 }
             }
         }

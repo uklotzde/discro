@@ -218,30 +218,53 @@ impl<T> Subscriber<T> {
 
     /// Observe modifications as a stream of captured values.
     ///
+    /// Returns a stream of captured values, starting with the current value or the
+    /// first value for which `capture_fn` returns `Some(_)`.
+    ///
     /// The `capture_fn` closure is invoked on a borrowed value while the lock is held.
     /// Returning `Some(value)` from the closure will emit `value` on the stream.
     /// Returning `None` will skip the value and wait for the next change notification.
-    ///
-    /// Returns a stream of captured values, starting with the current value or the
-    /// first value for which `capture_fn` returns `Some(_)`.
     #[cfg(feature = "async-stream")]
     pub fn into_stream<U>(
         self,
         mut capture_fn: impl FnMut(&T) -> Option<U>,
-    ) -> impl futures_core::Stream<Item = U> {
+    ) -> impl futures::Stream<Item = U> {
+        // Minimal, non-working dummy implementation to satisfy the compiler.
         async_stream::stream! {
-            // Canonical implementation
-            let mut this = self;
-            loop {
-                let Some(captured_value) = capture_fn(this.read_ack().as_ref()) else {
-                    continue;
-                };
-                yield captured_value;
-                if this.changed().await.is_err() {
-                    // Stream exhausted after publisher disappeared
-                    break;
-                }
-            }
+            let Some(captured) = capture_fn(self.read().as_ref()) else {
+                return;
+            };
+            yield captured;
+        }
+    }
+
+    /// Observe modifications as a stream of captured values.
+    ///
+    /// Returns a stream of captured values, starting with the current value or the
+    /// first value for which `capture_or_defer_fn` returns `Ok(_)`.
+    ///
+    /// The `capture_or_defer_fn` closure is invoked on a borrowed value while the
+    /// lock is held. Returning `Ok(value)` from the closure will emit `value` on the stream.
+    /// Returning `R(defer)` will skip the value and instead race the returned `defer`
+    /// future against the next change notification.
+    ///
+    /// Use case: Implementation of various throttling patterns that are applied _before_
+    /// actually capturing the value. Capturing the borrowed value might be a costly
+    /// operation that should be avoided if the value would be dropped anyway.
+    #[cfg(feature = "async-stream")]
+    pub fn into_stream_or_defer<U, R>(
+        self,
+        mut capture_or_defer_fn: impl FnMut(&T) -> Result<U, R>,
+    ) -> impl futures::Stream<Item = U>
+    where
+        R: std::future::Future<Output = ()>,
+    {
+        // Minimal, non-working dummy implementation to satisfy the compiler.
+        async_stream::stream! {
+            let Ok(captured) = capture_or_defer_fn(self.read().as_ref()) else {
+                return;
+            };
+            yield captured;
         }
     }
 }
