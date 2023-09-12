@@ -19,22 +19,6 @@ pub struct Ref<T> {
     phantom: PhantomData<T>,
 }
 
-impl<T> Ref<T> {
-    /// Query the *change* status
-    ///
-    /// Returns `Some(true)` if the the shared value behind this reference
-    /// is considered as *changed* or `Some(false)` if unchanged. The status
-    /// is determined when borrowing the reference, i.e. after acquiring the
-    /// read lock.
-    ///
-    /// Depending on the implementation or how the reference has been obtained
-    /// the *change* status might be unknown and `None` is returned.
-    #[must_use]
-    pub fn has_changed(&self) -> Option<bool> {
-        unimplemented!();
-    }
-}
-
 impl<T> AsRef<T> for Ref<T> {
     fn as_ref(&self) -> &T {
         unimplemented!();

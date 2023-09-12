@@ -16,13 +16,6 @@ use super::OrphanedSubscriberError;
 #[derive(Debug)]
 pub struct Ref<'r, T>(watch::Ref<'r, T>);
 
-impl<'r, T> Ref<'r, T> {
-    #[must_use]
-    pub fn has_changed(&self) -> Option<bool> {
-        Some(self.0.has_changed())
-    }
-}
-
 impl<'r, T> AsRef<T> for Ref<'r, T> {
     fn as_ref(&self) -> &T {
         &self.0
@@ -240,11 +233,7 @@ mod traits {
         let _ = assert_sync::<Publisher<i32>>;
     };
 
-    impl<T> crate::traits::Ref<T> for Ref<'_, T> {
-        fn has_changed(&self) -> Option<bool> {
-            self.has_changed()
-        }
-    }
+    impl<T> crate::traits::Ref<T> for Ref<'_, T> {}
 
     impl<'r, T> crate::traits::ReadOnlyPublisher<'r, T, Ref<'r, T>, Subscriber<T>>
         for ReadOnlyPublisher<T>
@@ -323,23 +312,5 @@ mod traits {
         async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
             self.changed().await
         }
-    }
-
-    #[test]
-    fn ref_has_changed() {
-        let (tx, mut rx) = super::new_pubsub(0);
-
-        {
-            let borrowed = rx.read_ack();
-            assert!(!borrowed.has_changed().unwrap_or(false));
-            assert_eq!(0, *borrowed);
-            // Implicitly release the read lock when dropping `borrowed`
-        }
-
-        tx.write(1);
-
-        let borrowed = rx.read_ack();
-        assert!(borrowed.has_changed().unwrap_or(true));
-        assert_eq!(1, *borrowed);
     }
 }

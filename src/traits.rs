@@ -11,10 +11,7 @@ use async_trait::async_trait;
 
 use super::OrphanedSubscriberError;
 
-pub(crate) trait Ref<T>: AsRef<T> + Deref<Target = T> {
-    #[must_use]
-    fn has_changed(&self) -> Option<bool>;
-}
+pub(crate) trait Ref<T>: AsRef<T> + Deref<Target = T> {}
 
 pub(crate) trait Readable<'r, T, R>
 where
