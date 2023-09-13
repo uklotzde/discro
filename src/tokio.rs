@@ -120,6 +120,15 @@ impl<T> Publisher<T> {
     }
 }
 
+impl<T> Default for Publisher<T>
+where
+    T: Default,
+{
+    fn default() -> Self {
+        Self::new(T::default())
+    }
+}
+
 #[derive(Debug)]
 pub struct Subscriber<T> {
     rx: watch::Receiver<T>,
