@@ -30,9 +30,17 @@ impl<'r, T> Deref for Ref<'r, T> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ReadOnlyPublisher<T> {
     tx: Arc<watch::Sender<T>>,
+}
+
+impl<T> Clone for ReadOnlyPublisher<T> {
+    fn clone(&self) -> Self {
+        Self {
+            tx: Arc::clone(&self.tx),
+        }
+    }
 }
 
 impl<T> ReadOnlyPublisher<T> {
@@ -112,9 +120,17 @@ impl<T> Publisher<T> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Subscriber<T> {
     rx: watch::Receiver<T>,
+}
+
+impl<T> Clone for Subscriber<T> {
+    fn clone(&self) -> Self {
+        Self {
+            rx: self.rx.clone(),
+        }
+    }
 }
 
 impl<T> Subscriber<T> {
@@ -235,9 +251,7 @@ mod traits {
 
     impl<T> crate::traits::Ref<T> for Ref<'_, T> {}
 
-    impl<'r, T> crate::traits::ReadOnlyPublisher<'r, T, Ref<'r, T>, Subscriber<T>>
-        for ReadOnlyPublisher<T>
-    {
+    impl<'r, T> crate::traits::Subscribable<'r, T, Ref<'r, T>, Subscriber<T>> for ReadOnlyPublisher<T> {
         fn has_subscribers(&self) -> bool {
             self.has_subscribers()
         }
@@ -247,13 +261,18 @@ mod traits {
         }
     }
 
+    impl<'r, T> crate::traits::ReadOnlyPublisher<'r, T, Ref<'r, T>, Subscriber<T>>
+        for ReadOnlyPublisher<T>
+    {
+    }
+
     impl<'r, T> crate::traits::Readable<'r, T, Ref<'r, T>> for ReadOnlyPublisher<T> {
         fn read(&self) -> Ref<'_, T> {
             self.read()
         }
     }
 
-    impl<'r, T> crate::traits::ReadOnlyPublisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
+    impl<'r, T> crate::traits::Subscribable<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
         fn has_subscribers(&self) -> bool {
             self.has_subscribers()
         }
