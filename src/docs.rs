@@ -146,6 +146,14 @@ impl<T> Publisher<T> {
     /// The result of the invoked `modify` closure controls if
     /// a change notification is sent or not. This result is
     /// finally returned.
+    ///
+    /// Return `true` to notify subscribers about the change, i.e.
+    /// if the value has been modified and the modification is
+    /// observable by subscribers.
+    ///
+    /// Return `false` to suppress change notifications, i.e. if
+    /// the value has either not been modified or if the modification
+    /// is not observable by subscribers.
     pub fn modify<M>(&self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool,
