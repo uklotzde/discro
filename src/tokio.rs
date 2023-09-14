@@ -234,11 +234,6 @@ impl<T> Subscriber<T> {
     }
 }
 
-pub fn new_pubsub<T>(initial_value: T) -> (Publisher<T>, Subscriber<T>) {
-    let (tx, rx) = watch::channel(initial_value);
-    (Publisher { tx: Arc::new(tx) }, Subscriber { rx })
-}
-
 #[cfg(test)]
 mod traits {
     use async_trait::async_trait;

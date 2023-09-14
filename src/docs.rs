@@ -275,9 +275,3 @@ impl<T> Subscriber<T> {
         }
     }
 }
-
-/// Create a [`Publisher`] with an initial [`Subscriber`].
-pub fn new_pubsub<T>(initial_value: T) -> (Publisher<T>, Subscriber<T>) {
-    drop(initial_value);
-    unimplemented!()
-}
