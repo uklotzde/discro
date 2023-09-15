@@ -47,10 +47,16 @@ pub struct ReadOnlyPublisher<T> {
 impl<T> ReadOnlyPublisher<T> {
     /// Check if the publisher has subscribers.
     ///
-    /// Returns `true` if at least one subscriber is connected
-    /// or `false` if the publish is orphaned.
+    /// Returns `Some(true)` if at least one subscriber is connected
+    /// or `Some(false)` if the publisher is orphaned. Returns `None`
+    /// if the number of subscribers cannot be determined, e.g. if
+    /// more than a single instance of this type exists.
+    ///
+    /// After returning `Some(false)` once the result must never change
+    /// unless new [`ReadOnlyPublisher`]s are cloned from the actual
+    /// [`Publisher`]! This ensures that no race conditions could occur.
     #[must_use]
-    pub fn has_subscribers(&self) -> bool {
+    pub fn has_subscribers(&self) -> Option<bool> {
         unimplemented!()
     }
 
@@ -97,7 +103,7 @@ impl<T> Publisher<T> {
 
     /// [`ReadOnlyPublisher::has_subscribers`]
     #[must_use]
-    pub fn has_subscribers(&self) -> bool {
+    pub fn has_subscribers(&self) -> Option<bool> {
         unimplemented!()
     }
 

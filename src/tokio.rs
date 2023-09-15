@@ -30,6 +30,36 @@ impl<'r, T> Deref for Ref<'r, T> {
     }
 }
 
+#[must_use]
+fn publisher_has_subscribers<T>(watch_tx: &Arc<watch::Sender<T>>) -> Option<bool> {
+    if !watch_tx.is_closed() {
+        return Some(true);
+    }
+    debug_assert!(Arc::strong_count(watch_tx) >= 1);
+    debug_assert_eq!(Arc::weak_count(watch_tx), 0);
+    if Arc::strong_count(watch_tx) == 1 {
+        // No other publisher exists from which new subscribers
+        // could be created concurrently. This would otherwise
+        // cause race conditions when the channel is reopened.
+        return Some(false);
+    }
+    None
+}
+
+#[must_use]
+#[inline]
+fn publisher_subscribe<T>(watch_tx: &watch::Sender<T>) -> Subscriber<T> {
+    Subscriber {
+        rx: watch_tx.subscribe(),
+    }
+}
+
+#[must_use]
+#[inline]
+fn publisher_read<T>(watch_tx: &watch::Sender<T>) -> Ref<'_, T> {
+    Ref(watch_tx.borrow())
+}
+
 #[derive(Debug)]
 pub struct ReadOnlyPublisher<T> {
     tx: Arc<watch::Sender<T>>,
@@ -45,20 +75,18 @@ impl<T> Clone for ReadOnlyPublisher<T> {
 
 impl<T> ReadOnlyPublisher<T> {
     #[must_use]
-    pub fn has_subscribers(&self) -> bool {
-        !self.tx.is_closed()
+    pub fn has_subscribers(&self) -> Option<bool> {
+        publisher_has_subscribers(&self.tx)
     }
 
     #[must_use]
     pub fn subscribe(&self) -> Subscriber<T> {
-        Subscriber {
-            rx: self.tx.subscribe(),
-        }
+        publisher_subscribe(&self.tx)
     }
 
     #[must_use]
     pub fn read(&self) -> Ref<'_, T> {
-        Ref(self.tx.borrow())
+        publisher_read(&self.tx)
     }
 }
 
@@ -83,20 +111,18 @@ impl<T> Publisher<T> {
     }
 
     #[must_use]
-    pub fn has_subscribers(&self) -> bool {
-        !self.tx.is_closed()
+    pub fn has_subscribers(&self) -> Option<bool> {
+        publisher_has_subscribers(&self.tx)
     }
 
     #[must_use]
     pub fn subscribe(&self) -> Subscriber<T> {
-        Subscriber {
-            rx: self.tx.subscribe(),
-        }
+        publisher_subscribe(&self.tx)
     }
 
     #[must_use]
     pub fn read(&self) -> Ref<'_, T> {
-        Ref(self.tx.borrow())
+        publisher_read(&self.tx)
     }
 
     pub fn write(&self, new_value: impl Into<T>) {
@@ -256,7 +282,7 @@ mod traits {
     impl<T> crate::traits::Ref<T> for Ref<'_, T> {}
 
     impl<'r, T> crate::traits::Subscribable<'r, T, Ref<'r, T>, Subscriber<T>> for ReadOnlyPublisher<T> {
-        fn has_subscribers(&self) -> bool {
+        fn has_subscribers(&self) -> Option<bool> {
             self.has_subscribers()
         }
 
@@ -277,7 +303,7 @@ mod traits {
     }
 
     impl<'r, T> crate::traits::Subscribable<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
-        fn has_subscribers(&self) -> bool {
+        fn has_subscribers(&self) -> Option<bool> {
             self.has_subscribers()
         }
 

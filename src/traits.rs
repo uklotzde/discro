@@ -27,7 +27,7 @@ where
     S: Subscriber<'r, T, R>,
 {
     #[must_use]
-    fn has_subscribers(&self) -> bool;
+    fn has_subscribers(&self) -> Option<bool>;
 
     #[must_use]
     fn subscribe(&self) -> S;
