@@ -207,10 +207,10 @@ impl<T> Subscriber<T> {
     ///
     /// Waits for a change notification, then marks the newest value as seen.
     ///
-    /// After subscribing, the first call to this method might not return
-    /// immediately. If the current value is considered as changed or not
-    /// depends on the underlying implementation. Prefer to obtain the first
-    /// value with [`read_ack()`](Self::read_ack()) before suspending execution!
+    /// After subscribing, the first call to this method returns immediately.
+    /// The current value after subscribing is always considered as _changed_.
+    /// This also applies when creating a new subscriber by cloning an existing
+    /// subscriber!
     ///
     /// # Errors
     ///

@@ -4,7 +4,7 @@
 [package]
 name = "discro"
 description = "DISCRete Observables for asynchronous Functional Reactive Programming (FRP)."
-version = "0.19.0"
+version = "0.20.0"
 license = "MPL-2.0"
 readme = "README.md"
 repository = "https://github.com/uklotzde/discro"
@@ -23,6 +23,7 @@ tokio = { version = "1.32.0", optional = true, default-features = false, feature
 
 [dev-dependencies]
 async-trait = "0.1.73"
+tokio = { version = "1.32.0", features = ["macros", "rt", "time"] }
 
 [features]
 default = ["async-stream"]

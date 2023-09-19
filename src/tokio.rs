@@ -51,6 +51,7 @@ fn publisher_has_subscribers<T>(watch_tx: &Arc<watch::Sender<T>>) -> Option<bool
 fn publisher_subscribe<T>(watch_tx: &watch::Sender<T>) -> Subscriber<T> {
     Subscriber {
         rx: watch_tx.subscribe(),
+        changed: true,
     }
 }
 
@@ -158,12 +159,20 @@ where
 #[derive(Debug)]
 pub struct Subscriber<T> {
     rx: watch::Receiver<T>,
+    // TODO: Remove this flag after upgrading to Tokio v1.33 and
+    // instead use Receiver::mark_changed() to enforce that the
+    // initial value is considered as changed.
+    // See also: <https://github.com/tokio-rs/tokio/pull/6014>
+    changed: bool,
 }
 
 impl<T> Clone for Subscriber<T> {
     fn clone(&self) -> Self {
+        let Self { rx, changed: _ } = self;
         Self {
-            rx: self.rx.clone(),
+            rx: rx.clone(),
+            // The state of the cloned subscriber must also be considered as changed!
+            changed: true,
         }
     }
 }
@@ -176,12 +185,18 @@ impl<T> Subscriber<T> {
 
     #[must_use]
     pub fn read_ack(&mut self) -> Ref<'_, T> {
+        self.changed = false;
         Ref(self.rx.borrow_and_update())
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
-        self.rx.changed().await.map_err(|_| OrphanedSubscriberError)
+        let Self { changed, rx } = self;
+        if *changed {
+            *changed = false;
+            return Ok(());
+        }
+        rx.changed().await.map_err(|_| OrphanedSubscriberError)
     }
 
     #[cfg(feature = "async-stream")]
@@ -256,6 +271,63 @@ impl<T> Subscriber<T> {
                     }
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Publisher;
+
+    #[tokio::test]
+    async fn changed_after_subscribing() {
+        let tx = Publisher::new(0);
+        let mut rx = tx.subscribe();
+        // The initial value is considered as changed.
+        tokio::select! {
+            _ = rx.changed() => (),
+            _ = tokio::time::sleep(std::time::Duration::from_millis(1)) => panic!("not changed as expected"),
+        }
+    }
+
+    #[tokio::test]
+    async fn changed_after_cloning_subscriber() {
+        let tx = Publisher::new(0);
+        let mut rx = tx.subscribe();
+        assert_eq!(*tx.read(), *rx.read_ack());
+        // No longer changed after acknowledging the value.
+        tokio::select! {
+            _ = rx.changed() => panic!("unexpected change"),
+            _ = tokio::time::sleep(std::time::Duration::from_millis(1)) => (),
+        }
+        // The initial value of the cloned subscriber is considered as changed,
+        // even if the original publisher has already acknowledged the value
+        // before cloning it.
+        let mut rx_cloned = rx.clone();
+        tokio::select! {
+            _ = rx_cloned.changed() => (),
+            _ = tokio::time::sleep(std::time::Duration::from_millis(1)) => panic!("not changed as expected"),
+        }
+    }
+
+    // This test won't terminate if the value is not considered as changed as expected.
+    // after reading but not acknowledging it.
+    #[tokio::test]
+    async fn changed_after_reading_without_acknowledging() {
+        let tx = Publisher::new(0);
+        let mut rx = tx.subscribe();
+        // Read but don't acknowledge the value.
+        assert_eq!(*tx.read(), *rx.read());
+        // Still changed after reading but not acknowledging the value.
+        tokio::select! {
+            _ = rx.changed() => (),
+            _ = tokio::time::sleep(std::time::Duration::from_millis(1)) => panic!("not changed as expected"),
+        }
+        assert_eq!(*tx.read(), *rx.read_ack());
+        // No longer changed after acknowledging the value.
+        tokio::select! {
+            _ = rx.changed() => panic!("unexpected change"),
+            _ = tokio::time::sleep(std::time::Duration::from_millis(1)) => (),
         }
     }
 }
