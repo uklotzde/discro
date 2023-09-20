@@ -6,6 +6,7 @@
 //! and hiding of unneeded features.
 
 #![allow(missing_docs)]
+#![allow(clippy::missing_errors_doc)]
 
 use std::{ops::Deref, sync::Arc};
 
@@ -189,6 +190,18 @@ impl<T> Subscriber<T> {
         Ref(self.rx.borrow_and_update())
     }
 
+    pub async fn read_ack_filtered(
+        &mut self,
+        filter_fn: impl FnMut(&T) -> bool,
+    ) -> Result<Ref<'_, T>, OrphanedSubscriberError> {
+        self.changed = false;
+        self.rx
+            .wait_for(filter_fn)
+            .await
+            .map(Ref)
+            .map_err(|_| OrphanedSubscriberError)
+    }
+
     #[allow(clippy::missing_errors_doc)]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
         let Self { changed, rx } = self;
@@ -200,47 +213,37 @@ impl<T> Subscriber<T> {
     }
 
     #[cfg(feature = "async-stream")]
-    pub fn into_stream<U>(
+    pub fn into_stream<U>(self, capture_fn: impl FnMut(&T) -> U) -> impl futures::Stream<Item = U> {
+        self.into_filtered_stream(|_| true, capture_fn)
+    }
+
+    #[cfg(feature = "async-stream")]
+    pub fn into_filtered_stream<U>(
         self,
+        mut filter_fn: impl FnMut(&T) -> bool,
         mut capture_fn: impl FnMut(&T) -> U,
     ) -> impl futures::Stream<Item = U> {
         async_stream::stream! {
             let mut this = self;
+            let filter_fn = &mut filter_fn;
             loop {
-                let captured = capture_fn(this.read_ack().as_ref());
-                yield captured;
-                if this.changed().await.is_err() {
-                    // Stream exhausted after publisher disappeared
-                    return;
+                match this.read_ack_filtered(|v| filter_fn(v)).await.map(|v| capture_fn(&v)) {
+                    Ok(captured) => {
+                        yield captured;
+                    }
+                    Err(OrphanedSubscriberError) => {
+                        // Stream exhausted after publisher disappeared
+                        return;
+                    }
                 }
             }
         }
     }
 
     #[cfg(feature = "async-stream")]
-    pub fn into_stream_or_skip<U>(
+    pub fn into_filtered_stream_or_defer<U, R>(
         self,
-        mut capture_or_skip_fn: impl FnMut(&T) -> Option<U>,
-    ) -> impl futures::Stream<Item = U> {
-        async_stream::stream! {
-            let mut this = self;
-            loop {
-                let Some(captured) = capture_or_skip_fn(this.read_ack().as_ref()) else {
-                    // Skip value
-                    continue;
-                };
-                yield captured;
-                if this.changed().await.is_err() {
-                    // Stream exhausted after publisher disappeared
-                    return;
-                }
-            }
-        }
-    }
-
-    #[cfg(feature = "async-stream")]
-    pub fn into_stream_or_defer<U, R>(
-        self,
+        mut filter_fn: impl FnMut(&T) -> bool,
         mut capture_or_defer_fn: impl FnMut(&T) -> Result<U, R>,
     ) -> impl futures::Stream<Item = U>
     where
@@ -248,25 +251,32 @@ impl<T> Subscriber<T> {
     {
         async_stream::stream! {
             let mut this = self;
+            // Defer forever
+            let mut next_defer = futures::future::Either::Left(std::future::pending());
             loop {
-                let defer = match capture_or_defer_fn(this.read_ack().as_ref()) {
-                    Ok(captured) => {
-                        yield captured;
-                        // Unconditionally wait for the next change notification,
-                        // i.e. defer forever.
-                        futures::future::Either::Left(std::future::pending())
-                    }
-                    Err(defer) => {
-                        // Don't yield and defer instead.
-                        futures::future::Either::Right(defer)
-                    }
-                };
                 futures::select! {
-                    _ = futures::FutureExt::fuse(defer) => (),
-                    changed = futures::FutureExt::fuse(this.changed()) => {
-                        if changed.is_err() {
+                    _ = futures::FutureExt::fuse(next_defer) => {
+                        // Defer forever
+                        next_defer = futures::future::Either::Left(std::future::pending());
+                    }
+                    next_ref = futures::FutureExt::fuse(this.read_ack_filtered(|v| filter_fn(v))) => {
+                        let Ok(next_ref) = next_ref else {
                             // Stream exhausted after publisher disappeared
                             return;
+                        };
+                        let captured_or_defer = capture_or_defer_fn(&next_ref);
+                        // Release the read lock before handling the result!
+                        drop(next_ref);
+                        match captured_or_defer {
+                            Ok(captured) => {
+                                yield captured;
+                                // Defer forever
+                                next_defer = futures::future::Either::Left(std::future::pending());
+                            }
+                            Err(defer) => {
+                                // Don't yield and defer instead
+                                next_defer = futures::future::Either::Right(defer);
+                            }
                         }
                     }
                 }
