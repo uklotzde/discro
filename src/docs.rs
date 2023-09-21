@@ -241,7 +241,14 @@ impl<T> Subscriber<T> {
     ///
     /// The `capture_fn` closure is invoked on a borrowed value while the lock is held.
     #[cfg(feature = "async-stream")]
-    pub fn into_stream<U>(self, capture_fn: impl FnMut(&T) -> U) -> impl futures::Stream<Item = U> {
+    pub fn into_stream<U>(
+        self,
+        capture_fn: impl FnMut(&T) -> U + Send + 'static,
+    ) -> impl futures::Stream<Item = U> + Send + 'static
+    where
+        T: Send + Sync + 'static,
+        U: Send + 'static,
+    {
         self.into_filtered_stream(|_| true, capture_fn)
     }
 
@@ -254,9 +261,13 @@ impl<T> Subscriber<T> {
     #[cfg(feature = "async-stream")]
     pub fn into_filtered_stream<U>(
         self,
-        mut filter_fn: impl FnMut(&T) -> bool,
-        mut capture_fn: impl FnMut(&T) -> U,
-    ) -> impl futures::Stream<Item = U> {
+        mut filter_fn: impl FnMut(&T) -> bool + Send + 'static,
+        mut capture_fn: impl FnMut(&T) -> U + Send + 'static,
+    ) -> impl futures::Stream<Item = U> + Send + 'static
+    where
+        T: Send + Sync + 'static,
+        U: Send + 'static,
+    {
         // Minimal, non-working dummy implementation to satisfy the compiler.
         async_stream::stream! {
             let next = self.read();
@@ -283,11 +294,13 @@ impl<T> Subscriber<T> {
     #[cfg(feature = "async-stream")]
     pub fn into_filtered_stream_or_defer<U, R>(
         self,
-        mut filter_fn: impl FnMut(&T) -> bool,
-        mut capture_or_defer_fn: impl FnMut(&T) -> Result<U, R>,
-    ) -> impl futures::Stream<Item = U>
+        mut filter_fn: impl FnMut(&T) -> bool + Send + 'static,
+        mut capture_or_defer_fn: impl FnMut(&T) -> Result<U, R> + Send + 'static,
+    ) -> impl futures::Stream<Item = U> + Send + 'static
     where
-        R: std::future::Future<Output = ()>,
+        R: std::future::Future<Output = ()> + Send + 'static,
+        T: Send + Sync + 'static,
+        U: Send + 'static,
     {
         // Minimal, non-working dummy implementation to satisfy the compiler.
         async_stream::stream! {

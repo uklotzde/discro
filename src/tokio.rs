@@ -213,29 +213,41 @@ impl<T> Subscriber<T> {
     }
 
     #[cfg(feature = "async-stream")]
-    pub fn into_stream<U>(self, capture_fn: impl FnMut(&T) -> U) -> impl futures::Stream<Item = U> {
+    pub fn into_stream<U>(
+        self,
+        capture_fn: impl FnMut(&T) -> U + Send + 'static,
+    ) -> impl futures::Stream<Item = U> + Send + 'static
+    where
+        T: Send + Sync + 'static,
+        U: Send + 'static,
+    {
         self.into_filtered_stream(|_| true, capture_fn)
     }
 
     #[cfg(feature = "async-stream")]
     pub fn into_filtered_stream<U>(
         self,
-        mut filter_fn: impl FnMut(&T) -> bool,
-        mut capture_fn: impl FnMut(&T) -> U,
-    ) -> impl futures::Stream<Item = U> {
+        mut filter_fn: impl FnMut(&T) -> bool + Send + 'static,
+        mut capture_fn: impl FnMut(&T) -> U + Send + 'static,
+    ) -> impl futures::Stream<Item = U> + Send + 'static
+    where
+        T: Send + Sync + 'static,
+        U: Send + 'static,
+    {
         async_stream::stream! {
             let mut this = self;
             let filter_fn = &mut filter_fn;
             loop {
-                match this.read_ack_filtered(|v| filter_fn(v)).await.map(|v| capture_fn(&v)) {
-                    Ok(captured) => {
-                        yield captured;
+                let captured = match this.read_ack_filtered(|v| filter_fn(v)).await {
+                    Ok(read_ref) => {
+                        capture_fn(&read_ref)
                     }
                     Err(OrphanedSubscriberError) => {
                         // Stream exhausted after publisher disappeared
                         return;
                     }
-                }
+                };
+                yield captured;
             }
         }
     }
@@ -243,43 +255,45 @@ impl<T> Subscriber<T> {
     #[cfg(feature = "async-stream")]
     pub fn into_filtered_stream_or_defer<U, R>(
         self,
-        mut filter_fn: impl FnMut(&T) -> bool,
-        mut capture_or_defer_fn: impl FnMut(&T) -> Result<U, R>,
-    ) -> impl futures::Stream<Item = U>
+        mut filter_fn: impl FnMut(&T) -> bool + Send + 'static,
+        mut capture_or_defer_fn: impl FnMut(&T) -> Result<U, R> + Send + 'static,
+    ) -> impl futures::Stream<Item = U> + Send + 'static
     where
-        R: std::future::Future<Output = ()>,
+        R: std::future::Future<Output = ()> + Send + 'static,
+        T: Send + Sync + 'static,
+        U: Send + 'static,
     {
         async_stream::stream! {
             let mut this = self;
             // Defer forever
             let mut next_defer = futures::future::Either::Left(std::future::pending());
             loop {
-                futures::select! {
+                let captured = futures::select! {
                     _ = futures::FutureExt::fuse(next_defer) => {
                         // Defer forever
                         next_defer = futures::future::Either::Left(std::future::pending());
+                        continue;
                     }
                     next_ref = futures::FutureExt::fuse(this.read_ack_filtered(|v| filter_fn(v))) => {
                         let Ok(next_ref) = next_ref else {
                             // Stream exhausted after publisher disappeared
                             return;
                         };
-                        let captured_or_defer = capture_or_defer_fn(&next_ref);
-                        // Release the read lock before handling the result!
-                        drop(next_ref);
-                        match captured_or_defer {
+                        match capture_or_defer_fn(&next_ref) {
                             Ok(captured) => {
-                                yield captured;
-                                // Defer forever
+                                // Defer forever again after yielding
                                 next_defer = futures::future::Either::Left(std::future::pending());
+                                captured
                             }
                             Err(defer) => {
                                 // Don't yield and defer instead
                                 next_defer = futures::future::Either::Right(defer);
+                                continue;
                             }
                         }
                     }
-                }
+                };
+                yield captured;
             }
         }
     }
