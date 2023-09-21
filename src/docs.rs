@@ -170,13 +170,19 @@ impl<T> Publisher<T> {
 }
 
 /// Read a shared value and receive change notifications asynchronously.
+///
+/// If the initial value is considered as changed or not depends on both
+/// the implementation and how the `Subscriber` has been created. Use
+/// [`mark_changed()`](Self::mark_changed) to explicitly mark the current
+/// value as _changed_ or reset it to _unchanged_ by calling
+/// [`read_ack()`](Self::read_ack).
 #[allow(missing_debug_implementations)]
 pub struct Subscriber<T> {
     phantom: PhantomData<T>,
 }
 
 impl<T> Subscriber<T> {
-    /// Read the most recent value
+    /// Read the current value
     ///
     /// Outstanding borrows hold a read lock. Trying to read the value
     /// again while already holding a read lock might cause a deadlock!
@@ -185,36 +191,20 @@ impl<T> Subscriber<T> {
         unimplemented!()
     }
 
-    /// Read and acknowledge the most recent value
-    ///
-    /// Returns a tuple with the borrowed value and a *changed flag*
-    /// that indicates if changes have been detected and acknowledged.
-    ///
-    /// Callers must be prepared to handle *false positive* results, i.e.
-    /// if the *changed flag* returns `true` even though the shared value
-    /// has not been modified. The accuracy of the *changed flag* depends
-    /// on the underlying implementation.
+    /// Read and acknowledge the current value
     ///
     /// Outstanding borrows hold a read lock. Trying to read the value
     /// again while already holding a read lock might cause a deadlock!
+    ///
+    /// The current value is marked as _seen_ and therefore considered
+    /// as _unchanged_ from now on.
     #[must_use]
     pub fn read_ack(&mut self) -> Ref<T> {
         unimplemented!()
     }
 
-    /// Read, acknowledge, and filter values
-    ///
-    /// The filter function is invoked on a borrowed value while the lock is held.
-    /// It might be invoked multiple times on the same value depending on the
-    /// underlying implementation. It is always invoked on the last published
-    /// value before returning an error.
-    #[allow(clippy::unused_async)]
-    #[allow(clippy::missing_errors_doc)]
-    pub async fn read_ack_filtered(
-        &mut self,
-        filter_fn: impl FnMut(&T) -> bool,
-    ) -> Result<Ref<T>, OrphanedSubscriberError> {
-        drop(filter_fn);
+    /// Mark the current value as _changed_, i.e. _unseen_.
+    pub fn mark_changed(&mut self) {
         unimplemented!()
     }
 
@@ -235,34 +225,23 @@ impl<T> Subscriber<T> {
         unimplemented!()
     }
 
-    /// Observe modifications as a stream of captured values.
+    /// Read and acknowledge the next, changed value.
     ///
-    /// Returns a stream of captured values, starting with the current value.
+    /// Needed for creating streams with _at-most-once_ semantics.
+    #[allow(clippy::unused_async)]
+    pub async fn read_ack_changed(&mut self) -> Result<Ref<T>, OrphanedSubscriberError> {
+        unimplemented!()
+    }
+
+    /// Observe modifications as a stream of changed values.
     ///
-    /// The `capture_fn` closure is invoked on a borrowed value while the lock is held.
+    /// Returns a stream of changed values.
+    ///
+    /// The `next_item_fn` closure is invoked on a borrowed value while the lock is held.
     #[cfg(feature = "async-stream")]
     pub fn into_stream<U>(
         self,
-        capture_fn: impl FnMut(&T) -> U + Send + 'static,
-    ) -> impl futures::Stream<Item = U> + Send + 'static
-    where
-        T: Send + Sync + 'static,
-        U: Send + 'static,
-    {
-        self.into_filtered_stream(|_| true, capture_fn)
-    }
-
-    /// Observe modifications as a stream of captured values.
-    ///
-    /// Returns a stream of captured values, starting with the first value for which
-    /// `filter_fn` returns `true`.
-    ///
-    /// The `capture_fn` closure is invoked on a borrowed value while the lock is held.
-    #[cfg(feature = "async-stream")]
-    pub fn into_filtered_stream<U>(
-        self,
-        mut filter_fn: impl FnMut(&T) -> bool + Send + 'static,
-        mut capture_fn: impl FnMut(&T) -> U + Send + 'static,
+        mut next_item_fn: impl FnMut(&T) -> U + Send + 'static,
     ) -> impl futures::Stream<Item = U> + Send + 'static
     where
         T: Send + Sync + 'static,
@@ -270,48 +249,34 @@ impl<T> Subscriber<T> {
     {
         // Minimal, non-working dummy implementation to satisfy the compiler.
         async_stream::stream! {
-            let next = self.read();
-            if !filter_fn(next.as_ref()) {
-                return;
-            }
-            let captured = capture_fn(next.as_ref());
-            yield captured;
+            let next_ref = self.read();
+            let next_item = next_item_fn(&next_ref);
+            yield next_item;
         }
     }
 
-    /// Observe modifications as a stream of captured values.
+    /// Observe modifications as a stream of changed values.
     ///
-    /// Returns a stream of filtered and captured values.
+    /// Returns a stream of values, starting with the first changed value for which
+    /// `next_item_fn` returns `Some`.
     ///
-    /// The `capture_or_defer_fn` closure is invoked on a borrowed value while the
-    /// lock is held. Returning `Ok(value)` from the closure will emit `value` on the stream.
-    /// Returning `Err(defer)` will skip the value and instead race the returned `defer`
-    /// future against the next change notification.
-    ///
-    /// Use case: Implementation of various throttling patterns that are applied _before_
-    /// actually capturing the value. Capturing the borrowed value might be a costly
-    /// operation that should be avoided if the value would be dropped anyway.
+    /// The `next_item_fn` closure is invoked on a borrowed value while the lock is held.
     #[cfg(feature = "async-stream")]
-    pub fn into_filtered_stream_or_defer<U, R>(
+    pub fn into_stream_filtered<U>(
         self,
-        mut filter_fn: impl FnMut(&T) -> bool + Send + 'static,
-        mut capture_or_defer_fn: impl FnMut(&T) -> Result<U, R> + Send + 'static,
+        mut next_item_fn: impl FnMut(&T) -> Option<U> + Send + 'static,
     ) -> impl futures::Stream<Item = U> + Send + 'static
     where
-        R: std::future::Future<Output = ()> + Send + 'static,
         T: Send + Sync + 'static,
         U: Send + 'static,
     {
         // Minimal, non-working dummy implementation to satisfy the compiler.
         async_stream::stream! {
-            let next = self.read();
-            if !filter_fn(next.as_ref()) {
-                return;
-            }
-            let Ok(captured) = capture_or_defer_fn(next.as_ref()) else {
+            let next_ref = self.read();
+            let Some(next_item) = next_item_fn(&next_ref) else {
                 return;
             };
-            yield captured;
+            yield next_item;
         }
     }
 }

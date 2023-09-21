@@ -11,7 +11,7 @@ use async_trait::async_trait;
 
 use super::OrphanedSubscriberError;
 
-pub(crate) trait Ref<T>: AsRef<T> + Deref<Target = T> {}
+pub(crate) trait Ref<T>: Deref<Target = T> {}
 
 pub(crate) trait Readable<'r, T, R>
 where
@@ -48,10 +48,10 @@ where
 {
     fn clone_read_only(&self) -> P;
 
-    fn write(&self, new_value: impl Into<T>);
+    fn write(&self, new_value: T);
 
     #[must_use]
-    fn replace(&self, new_value: impl Into<T>) -> T;
+    fn replace(&self, new_value: T) -> T;
 
     fn modify<M>(&self, modify: M) -> bool
     where
@@ -64,9 +64,13 @@ where
 {
     #[must_use]
     fn read_ack(&'r mut self) -> R;
+
+    // TODO: How to implement this async fn properly?
+    //async fn read_ack_changed(&'r mut self) -> Result<R, OrphanedSubscriberError>;
 }
 
 #[async_trait]
 pub(crate) trait ChangeListener {
+    fn mark_changed(&mut self);
     async fn changed(&mut self) -> Result<(), OrphanedSubscriberError>;
 }

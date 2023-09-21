@@ -17,17 +17,11 @@ use super::OrphanedSubscriberError;
 #[derive(Debug)]
 pub struct Ref<'r, T>(watch::Ref<'r, T>);
 
-impl<'r, T> AsRef<T> for Ref<'r, T> {
-    fn as_ref(&self) -> &T {
-        &self.0
-    }
-}
-
 impl<'r, T> Deref for Ref<'r, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.as_ref()
+        &self.0
     }
 }
 
@@ -50,10 +44,7 @@ fn publisher_has_subscribers<T>(watch_tx: &Arc<watch::Sender<T>>) -> Option<bool
 #[must_use]
 #[inline]
 fn publisher_subscribe<T>(watch_tx: &watch::Sender<T>) -> Subscriber<T> {
-    Subscriber {
-        rx: watch_tx.subscribe(),
-        changed: true,
-    }
+    Subscriber::new(watch_tx.subscribe())
 }
 
 #[must_use]
@@ -127,17 +118,18 @@ impl<T> Publisher<T> {
         publisher_read(&self.tx)
     }
 
-    pub fn write(&self, new_value: impl Into<T>) {
+    pub fn write(&self, new_value: T) {
         // Sender::send() would prematurely abort and fail if
         // no senders are connected and the current value would
         // not be replaced as expected. Therefore we have to use
         // Sender::send_modify() here!
-        self.tx.send_modify(move |value| *value = new_value.into());
+        // The conversion into the value is done before the locking scope.
+        self.tx.send_modify(move |value| *value = new_value);
     }
 
     #[must_use]
-    pub fn replace(&self, new_value: impl Into<T>) -> T {
-        self.tx.send_replace(new_value.into())
+    pub fn replace(&self, new_value: T) -> T {
+        self.tx.send_replace(new_value)
     }
 
     pub fn modify<M>(&self, modify: M) -> bool
@@ -160,25 +152,13 @@ where
 #[derive(Debug)]
 pub struct Subscriber<T> {
     rx: watch::Receiver<T>,
-    // TODO: Remove this flag after upgrading to Tokio v1.33 and
-    // instead use Receiver::mark_changed() to enforce that the
-    // initial value is considered as changed.
-    // See also: <https://github.com/tokio-rs/tokio/pull/6014>
-    changed: bool,
-}
-
-impl<T> Clone for Subscriber<T> {
-    fn clone(&self) -> Self {
-        let Self { rx, changed: _ } = self;
-        Self {
-            rx: rx.clone(),
-            // The state of the cloned subscriber must also be considered as changed!
-            changed: true,
-        }
-    }
 }
 
 impl<T> Subscriber<T> {
+    fn new(rx: watch::Receiver<T>) -> Self {
+        Self { rx }
+    }
+
     #[must_use]
     pub fn read(&self) -> Ref<'_, T> {
         Ref(self.rx.borrow())
@@ -186,49 +166,27 @@ impl<T> Subscriber<T> {
 
     #[must_use]
     pub fn read_ack(&mut self) -> Ref<'_, T> {
-        self.changed = false;
         Ref(self.rx.borrow_and_update())
     }
 
-    pub async fn read_ack_filtered(
-        &mut self,
-        filter_fn: impl FnMut(&T) -> bool,
-    ) -> Result<Ref<'_, T>, OrphanedSubscriberError> {
-        self.changed = false;
-        self.rx
-            .wait_for(filter_fn)
-            .await
-            .map(Ref)
-            .map_err(|_| OrphanedSubscriberError)
+    pub fn mark_changed(&mut self) {
+        //FIXME: Requires Tokio v1.33.0
+        //self.rx.mark_changed();
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
-        let Self { changed, rx } = self;
-        if *changed {
-            *changed = false;
-            return Ok(());
-        }
-        rx.changed().await.map_err(|_| OrphanedSubscriberError)
+        self.rx.changed().await.map_err(|_| OrphanedSubscriberError)
+    }
+
+    pub async fn read_ack_changed(&mut self) -> Result<Ref<'_, T>, OrphanedSubscriberError> {
+        self.changed().await.map(|()| self.read_ack())
     }
 
     #[cfg(feature = "async-stream")]
     pub fn into_stream<U>(
         self,
-        capture_fn: impl FnMut(&T) -> U + Send + 'static,
-    ) -> impl futures::Stream<Item = U> + Send + 'static
-    where
-        T: Send + Sync + 'static,
-        U: Send + 'static,
-    {
-        self.into_filtered_stream(|_| true, capture_fn)
-    }
-
-    #[cfg(feature = "async-stream")]
-    pub fn into_filtered_stream<U>(
-        self,
-        mut filter_fn: impl FnMut(&T) -> bool + Send + 'static,
-        mut capture_fn: impl FnMut(&T) -> U + Send + 'static,
+        mut next_item_fn: impl FnMut(&T) -> U + Send + 'static,
     ) -> impl futures::Stream<Item = U> + Send + 'static
     where
         T: Send + Sync + 'static,
@@ -236,66 +194,78 @@ impl<T> Subscriber<T> {
     {
         async_stream::stream! {
             let mut this = self;
-            let filter_fn = &mut filter_fn;
+            let next_item_fn = &mut next_item_fn;
             loop {
-                let captured = match this.read_ack_filtered(|v| filter_fn(v)).await {
-                    Ok(read_ref) => {
-                        capture_fn(&read_ref)
-                    }
-                    Err(OrphanedSubscriberError) => {
-                        // Stream exhausted after publisher disappeared
-                        return;
-                    }
-                };
-                yield captured;
-            }
-        }
-    }
-
-    #[cfg(feature = "async-stream")]
-    pub fn into_filtered_stream_or_defer<U, R>(
-        self,
-        mut filter_fn: impl FnMut(&T) -> bool + Send + 'static,
-        mut capture_or_defer_fn: impl FnMut(&T) -> Result<U, R> + Send + 'static,
-    ) -> impl futures::Stream<Item = U> + Send + 'static
-    where
-        R: std::future::Future<Output = ()> + Send + 'static,
-        T: Send + Sync + 'static,
-        U: Send + 'static,
-    {
-        async_stream::stream! {
-            let mut this = self;
-            // Defer forever
-            let mut next_defer = futures::future::Either::Left(std::future::pending());
-            loop {
-                let captured = futures::select! {
-                    _ = futures::FutureExt::fuse(next_defer) => {
-                        // Defer forever
-                        next_defer = futures::future::Either::Left(std::future::pending());
-                        continue;
-                    }
-                    next_ref = futures::FutureExt::fuse(this.read_ack_filtered(|v| filter_fn(v))) => {
-                        let Ok(next_ref) = next_ref else {
-                            // Stream exhausted after publisher disappeared
-                            return;
-                        };
-                        match capture_or_defer_fn(&next_ref) {
-                            Ok(captured) => {
-                                // Defer forever again after yielding
-                                next_defer = futures::future::Either::Left(std::future::pending());
-                                captured
-                            }
-                            Err(defer) => {
-                                // Don't yield and defer instead
-                                next_defer = futures::future::Either::Right(defer);
-                                continue;
+                let next_item = match this.read_ack_changed().await {
+                    Ok(next_changed) => {
+                        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| next_item_fn(&next_changed)));
+                        match result {
+                            Ok(next_item) => next_item,
+                            Err(panicked) => {
+                                // Drop the read-lock to avoid poisoning it.
+                                drop(next_changed);
+                                // Forward the panic to the caller.
+                                std::panic::resume_unwind(panicked);
+                                // Unreachable
                             }
                         }
                     }
+                    Err(OrphanedSubscriberError) => {
+                        // Stream exhausted after publisher disappeared.
+                        return;
+                    }
                 };
-                yield captured;
+                yield next_item;
             }
         }
+    }
+
+    #[cfg(feature = "async-stream")]
+    pub fn into_stream_filtered<U>(
+        self,
+        mut next_item_fn: impl FnMut(&T) -> Option<U> + Send + 'static,
+    ) -> impl futures::Stream<Item = U> + Send + 'static
+    where
+        T: Send + Sync + 'static,
+        U: Send + 'static,
+    {
+        async_stream::stream! {
+            let mut this = self;
+            let next_item_fn = &mut next_item_fn;
+            loop {
+                let next_item = match this.read_ack_changed().await {
+                    Ok(next_changed) => {
+                        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| next_item_fn(&next_changed)));
+                        match result {
+                            Ok(Some(next_item)) => next_item,
+                            Ok(None) => {
+                                // Skip this value.
+                                continue;
+                            }
+                            Err(panicked) => {
+                                // Drop the read-lock to avoid poisoning it.
+                                drop(next_changed);
+                                // Forward the panic to the caller.
+                                std::panic::resume_unwind(panicked);
+                                // Unreachable
+                            }
+                        }
+                    }
+                    Err(OrphanedSubscriberError) => {
+                        // Stream exhausted after publisher disappeared.
+                        return;
+                    }
+                };
+                yield next_item;
+            }
+        }
+    }
+}
+
+impl<T> Clone for Subscriber<T> {
+    fn clone(&self) -> Self {
+        let Self { rx } = self;
+        Self::new(rx.clone())
     }
 }
 
@@ -303,56 +273,29 @@ impl<T> Subscriber<T> {
 mod tests {
     use crate::Publisher;
 
-    #[tokio::test]
-    async fn changed_after_subscribing() {
-        let tx = Publisher::new(0);
-        let mut rx = tx.subscribe();
-        // The initial value is considered as changed.
-        tokio::select! {
-            _ = rx.changed() => (),
-            _ = tokio::time::sleep(std::time::Duration::from_millis(1)) => panic!("not changed as expected"),
-        }
-    }
-
-    #[tokio::test]
-    async fn changed_after_cloning_subscriber() {
-        let tx = Publisher::new(0);
-        let mut rx = tx.subscribe();
-        assert_eq!(*tx.read(), *rx.read_ack());
-        // No longer changed after acknowledging the value.
-        tokio::select! {
-            _ = rx.changed() => panic!("unexpected change"),
-            _ = tokio::time::sleep(std::time::Duration::from_millis(1)) => (),
-        }
-        // The initial value of the cloned subscriber is considered as changed,
-        // even if the original publisher has already acknowledged the value
-        // before cloning it.
-        let mut rx_cloned = rx.clone();
-        tokio::select! {
-            _ = rx_cloned.changed() => (),
-            _ = tokio::time::sleep(std::time::Duration::from_millis(1)) => panic!("not changed as expected"),
-        }
-    }
-
     // This test won't terminate if the value is not considered as changed as expected.
     // after reading but not acknowledging it.
     #[tokio::test]
     async fn changed_after_reading_without_acknowledging() {
         let tx = Publisher::new(0);
         let mut rx = tx.subscribe();
+        // Publish a new, changed value
+        tx.write(0);
         // Read but don't acknowledge the value.
         assert_eq!(*tx.read(), *rx.read());
         // Still changed after reading but not acknowledging the value.
-        tokio::select! {
-            _ = rx.changed() => (),
-            _ = tokio::time::sleep(std::time::Duration::from_millis(1)) => panic!("not changed as expected"),
-        }
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(1), rx.changed())
+                .await
+                .is_ok()
+        );
         assert_eq!(*tx.read(), *rx.read_ack());
         // No longer changed after acknowledging the value.
-        tokio::select! {
-            _ = rx.changed() => panic!("unexpected change"),
-            _ = tokio::time::sleep(std::time::Duration::from_millis(1)) => (),
-        }
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(1), rx.changed())
+                .await
+                .is_err()
+        );
     }
 }
 
@@ -415,11 +358,11 @@ mod traits {
             self.clone_read_only()
         }
 
-        fn write(&self, new_value: impl Into<T>) {
+        fn write(&self, new_value: T) {
             self.write(new_value);
         }
 
-        fn replace(&self, new_value: impl Into<T>) -> T {
+        fn replace(&self, new_value: T) -> T {
             self.replace(new_value)
         }
 
@@ -454,6 +397,10 @@ mod traits {
     where
         T: Send + Sync,
     {
+        fn mark_changed(&mut self) {
+            self.mark_changed();
+        }
+
         async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
             self.changed().await
         }
