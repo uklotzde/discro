@@ -184,7 +184,7 @@ impl<T> Subscriber<T> {
     }
 
     #[cfg(feature = "async-stream")]
-    pub fn into_stream<U>(
+    pub fn into_changed_stream<U>(
         self,
         mut next_item_fn: impl FnMut(&T) -> U + Send + 'static,
     ) -> impl futures::Stream<Item = U> + Send + 'static
@@ -221,7 +221,7 @@ impl<T> Subscriber<T> {
     }
 
     #[cfg(feature = "async-stream")]
-    pub fn into_stream_filtered<U>(
+    pub fn into_changed_stream_filtered<U>(
         self,
         mut next_item_fn: impl FnMut(&T) -> Option<U> + Send + 'static,
     ) -> impl futures::Stream<Item = U> + Send + 'static

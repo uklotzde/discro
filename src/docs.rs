@@ -239,10 +239,10 @@ impl<T> Subscriber<T> {
     ///
     /// The `next_item_fn` closure is invoked on a borrowed value while the lock is held.
     #[cfg(feature = "async-stream")]
-    pub fn into_stream<U>(
+    pub fn into_changed_stream<U>(
         self,
-        mut next_item_fn: impl FnMut(&T) -> U + Send + 'static,
-    ) -> impl futures::Stream<Item = U> + Send + 'static
+        mut next_item_fn: impl FnMut(&T) -> U + Send,
+    ) -> impl futures::Stream<Item = U> + Send
     where
         T: Send + Sync + 'static,
         U: Send + 'static,
@@ -262,10 +262,10 @@ impl<T> Subscriber<T> {
     ///
     /// The `next_item_fn` closure is invoked on a borrowed value while the lock is held.
     #[cfg(feature = "async-stream")]
-    pub fn into_stream_filtered<U>(
+    pub fn into_changed_stream_filtered<U>(
         self,
-        mut next_item_fn: impl FnMut(&T) -> Option<U> + Send + 'static,
-    ) -> impl futures::Stream<Item = U> + Send + 'static
+        mut next_item_fn: impl FnMut(&T) -> Option<U> + Send,
+    ) -> impl futures::Stream<Item = U> + Send
     where
         T: Send + Sync + 'static,
         U: Send + 'static,
