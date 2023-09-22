@@ -37,6 +37,8 @@ mod traits;
 #[error("disconnected from publisher")]
 pub struct OrphanedSubscriberError;
 
+pub(crate) mod subscriber;
+
 #[cfg(feature = "tokio")]
 mod tokio;
 

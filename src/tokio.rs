@@ -8,11 +8,12 @@
 #![allow(missing_docs)]
 #![allow(clippy::missing_errors_doc)]
 
-use std::{ops::Deref, panic, sync::Arc};
+use std::{ops::Deref, sync::Arc};
 
 use tokio::sync::watch;
 
 use super::OrphanedSubscriberError;
+use crate::subscriber::{filter_map_changed, map_changed};
 
 #[derive(Debug)]
 pub struct Ref<'r, T>(watch::Ref<'r, T>);
@@ -196,46 +197,16 @@ impl<T> Subscriber<T> {
 
     pub async fn map_changed<U>(
         &mut self,
-        mut map_fn: impl FnMut(&T) -> U,
+        map_fn: impl FnMut(&T) -> U,
     ) -> Result<U, OrphanedSubscriberError> {
-        let next_changed = self.read_changed().await?;
-        let result = panic::catch_unwind(panic::AssertUnwindSafe(|| map_fn(&next_changed)));
-        match result {
-            Ok(next_item) => Ok(next_item),
-            Err(panicked) => {
-                // Drop the read-lock to avoid poisoning it.
-                drop(next_changed);
-                // Forward the panic to the caller.
-                panic::resume_unwind(panicked);
-                // Unreachable
-            }
-        }
+        map_changed(self, map_fn).await
     }
 
     pub async fn filter_map_changed<U>(
         &mut self,
-        mut filter_map_fn: impl FnMut(&T) -> Option<U>,
+        filter_map_fn: impl FnMut(&T) -> Option<U>,
     ) -> Result<U, OrphanedSubscriberError> {
-        loop {
-            let next_changed = self.read_changed().await?;
-            let result =
-                panic::catch_unwind(panic::AssertUnwindSafe(|| filter_map_fn(&next_changed)));
-            match result {
-                Ok(Some(next_item)) => {
-                    return Ok(next_item);
-                }
-                Ok(None) => {
-                    continue;
-                }
-                Err(panicked) => {
-                    // Drop the read-lock to avoid poisoning it.
-                    drop(next_changed);
-                    // Forward the panic to the caller.
-                    panic::resume_unwind(panicked);
-                    // Unreachable
-                }
-            }
-        }
+        filter_map_changed(self, filter_map_fn).await
     }
 }
 
