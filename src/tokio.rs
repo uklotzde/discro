@@ -237,60 +237,6 @@ impl<T> Subscriber<T> {
             }
         }
     }
-
-    #[cfg(feature = "async-stream")]
-    pub fn into_changed_stream<'u, U>(
-        self,
-        mut next_item_fn: impl FnMut(&T) -> U + Send + 'u,
-    ) -> impl futures::Stream<Item = U> + Send + 'u
-    where
-        T: Send + Sync + 'u,
-        U: Send + 'u,
-    {
-        async_stream::stream! {
-            let mut this = self;
-            let next_item_fn = &mut next_item_fn;
-            #[allow(clippy::while_let_loop)]
-            loop {
-                match this.map_changed(|next| next_item_fn(next)).await {
-                    Ok(next_item) => {
-                        yield next_item
-                    }
-                    Err(OrphanedSubscriberError) => {
-                        // Stream exhausted after publisher disappeared.
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(feature = "async-stream")]
-    pub fn into_changed_stream_filtered<'u, U>(
-        self,
-        mut next_item_fn: impl FnMut(&T) -> Option<U> + Send + 'u,
-    ) -> impl futures::Stream<Item = U> + Send + 'u
-    where
-        T: Send + Sync + 'u,
-        U: Send + 'u,
-    {
-        async_stream::stream! {
-            let mut this = self;
-            let next_item_fn = &mut next_item_fn;
-            #[allow(clippy::while_let_loop)]
-            loop {
-                match this.filter_map_changed(|next| next_item_fn(next)).await {
-                    Ok(next_item) => {
-                        yield next_item
-                    }
-                    Err(OrphanedSubscriberError) => {
-                        // Stream exhausted after publisher disappeared.
-                        break;
-                    }
-                }
-            }
-        }
-    }
 }
 
 impl<T> Clone for Subscriber<T> {

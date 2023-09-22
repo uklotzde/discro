@@ -43,4 +43,10 @@ mod tokio;
 #[cfg(feature = "tokio")]
 pub use self::tokio::*;
 
+#[cfg(feature = "async-stream")]
+mod async_stream;
+
+#[cfg(feature = "async-stream")]
+pub use self::async_stream::*;
+
 pub mod tasklet;
