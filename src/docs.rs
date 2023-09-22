@@ -229,8 +229,33 @@ impl<T> Subscriber<T> {
     ///
     /// Needed for creating streams with _at-most-once_ semantics.
     #[allow(clippy::unused_async)]
-    pub async fn read_ack_changed(&mut self) -> Result<Ref<T>, OrphanedSubscriberError> {
+    pub async fn read_changed(&mut self) -> Result<Ref<T>, OrphanedSubscriberError> {
         unimplemented!()
+    }
+
+    /// Capture the next, changed value.
+    ///
+    /// The temporary reference is mapped to a custom type before returning.
+    pub async fn map_changed<U>(
+        &mut self,
+        mut map_fn: impl FnMut(&T) -> U,
+    ) -> Result<U, OrphanedSubscriberError> {
+        self.read_changed().await.map(|next_ref| map_fn(&next_ref))
+    }
+
+    /// Capture the next, changed value conditionally.
+    ///
+    /// The temporary reference is filtered and mapped to a custom type before returning.
+    pub async fn filter_map_changed<U>(
+        &mut self,
+        mut filter_map_fn: impl FnMut(&T) -> Option<U>,
+    ) -> Result<U, OrphanedSubscriberError> {
+        loop {
+            let next_changed = self.read_changed().await?;
+            if let Some(next_item) = filter_map_fn(&next_changed) {
+                return Ok(next_item);
+            }
+        }
     }
 
     /// Observe modifications as a stream of changed values.
@@ -239,13 +264,13 @@ impl<T> Subscriber<T> {
     ///
     /// The `next_item_fn` closure is invoked on a borrowed value while the lock is held.
     #[cfg(feature = "async-stream")]
-    pub fn into_changed_stream<U>(
+    pub fn into_changed_stream<'u, U>(
         self,
-        mut next_item_fn: impl FnMut(&T) -> U + Send,
-    ) -> impl futures::Stream<Item = U> + Send
+        mut next_item_fn: impl FnMut(&T) -> U + Send + 'u,
+    ) -> impl futures::Stream<Item = U> + Send + 'u
     where
-        T: Send + Sync,
-        U: Send,
+        T: Send + Sync + 'u,
+        U: Send + 'u,
     {
         // Minimal, non-working dummy implementation to satisfy the compiler.
         async_stream::stream! {
@@ -262,13 +287,13 @@ impl<T> Subscriber<T> {
     ///
     /// The `next_item_fn` closure is invoked on a borrowed value while the lock is held.
     #[cfg(feature = "async-stream")]
-    pub fn into_changed_stream_filtered<U>(
+    pub fn into_changed_stream_filtered<'u, U>(
         self,
-        mut next_item_fn: impl FnMut(&T) -> Option<U> + Send,
-    ) -> impl futures::Stream<Item = U> + Send
+        mut next_item_fn: impl FnMut(&T) -> Option<U> + Send + 'u,
+    ) -> impl futures::Stream<Item = U> + Send + 'u
     where
-        T: Send + Sync,
-        U: Send,
+        T: Send + Sync + 'u,
+        U: Send + 'u,
     {
         // Minimal, non-working dummy implementation to satisfy the compiler.
         async_stream::stream! {

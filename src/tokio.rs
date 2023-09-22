@@ -8,7 +8,7 @@
 #![allow(missing_docs)]
 #![allow(clippy::missing_errors_doc)]
 
-use std::{ops::Deref, sync::Arc};
+use std::{ops::Deref, panic, sync::Arc};
 
 use tokio::sync::watch;
 
@@ -152,11 +152,14 @@ where
 #[derive(Debug)]
 pub struct Subscriber<T> {
     rx: watch::Receiver<T>,
+    // TODO: Remove the changed flag after upgrading to Tokio v1.33.0
+    changed: bool,
 }
 
 impl<T> Subscriber<T> {
-    fn new(rx: watch::Receiver<T>) -> Self {
-        Self { rx }
+    fn new(mut rx: watch::Receiver<T>) -> Self {
+        let changed = rx.borrow_and_update().has_changed();
+        Self { rx, changed }
     }
 
     #[must_use]
@@ -166,97 +169,125 @@ impl<T> Subscriber<T> {
 
     #[must_use]
     pub fn read_ack(&mut self) -> Ref<'_, T> {
+        if self.changed {
+            self.changed = false;
+        }
         Ref(self.rx.borrow_and_update())
     }
 
     pub fn mark_changed(&mut self) {
         //FIXME: Requires Tokio v1.33.0
         //self.rx.mark_changed();
+        self.changed = true;
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
+        if self.changed {
+            self.changed = false;
+            return Ok(());
+        }
         self.rx.changed().await.map_err(|_| OrphanedSubscriberError)
     }
 
-    pub async fn read_ack_changed(&mut self) -> Result<Ref<'_, T>, OrphanedSubscriberError> {
+    pub async fn read_changed(&mut self) -> Result<Ref<'_, T>, OrphanedSubscriberError> {
         self.changed().await.map(|()| self.read_ack())
     }
 
-    #[cfg(feature = "async-stream")]
-    pub fn into_changed_stream<U>(
-        self,
-        mut next_item_fn: impl FnMut(&T) -> U + Send,
-    ) -> impl futures::Stream<Item = U> + Send
-    where
-        T: Send + Sync,
-        U: Send,
-    {
-        async_stream::stream! {
-            let mut this = self;
-            let next_item_fn = &mut next_item_fn;
-            loop {
-                let next_item = match this.read_ack_changed().await {
-                    Ok(next_changed) => {
-                        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| next_item_fn(&next_changed)));
-                        match result {
-                            Ok(next_item) => next_item,
-                            Err(panicked) => {
-                                // Drop the read-lock to avoid poisoning it.
-                                drop(next_changed);
-                                // Forward the panic to the caller.
-                                std::panic::resume_unwind(panicked);
-                                // Unreachable
-                            }
-                        }
-                    }
-                    Err(OrphanedSubscriberError) => {
-                        // Stream exhausted after publisher disappeared.
-                        return;
-                    }
-                };
-                yield next_item;
+    pub async fn map_changed<U>(
+        &mut self,
+        mut map_fn: impl FnMut(&T) -> U,
+    ) -> Result<U, OrphanedSubscriberError> {
+        let next_changed = self.read_changed().await?;
+        let result = panic::catch_unwind(panic::AssertUnwindSafe(|| map_fn(&next_changed)));
+        match result {
+            Ok(next_item) => Ok(next_item),
+            Err(panicked) => {
+                // Drop the read-lock to avoid poisoning it.
+                drop(next_changed);
+                // Forward the panic to the caller.
+                panic::resume_unwind(panicked);
+                // Unreachable
+            }
+        }
+    }
+
+    pub async fn filter_map_changed<U>(
+        &mut self,
+        mut filter_map_fn: impl FnMut(&T) -> Option<U>,
+    ) -> Result<U, OrphanedSubscriberError> {
+        loop {
+            let next_changed = self.read_changed().await?;
+            let result =
+                panic::catch_unwind(panic::AssertUnwindSafe(|| filter_map_fn(&next_changed)));
+            match result {
+                Ok(Some(next_item)) => {
+                    return Ok(next_item);
+                }
+                Ok(None) => {
+                    continue;
+                }
+                Err(panicked) => {
+                    // Drop the read-lock to avoid poisoning it.
+                    drop(next_changed);
+                    // Forward the panic to the caller.
+                    panic::resume_unwind(panicked);
+                    // Unreachable
+                }
             }
         }
     }
 
     #[cfg(feature = "async-stream")]
-    pub fn into_changed_stream_filtered<U>(
+    pub fn into_changed_stream<'u, U>(
         self,
-        mut next_item_fn: impl FnMut(&T) -> Option<U> + Send,
-    ) -> impl futures::Stream<Item = U> + Send
+        mut next_item_fn: impl FnMut(&T) -> U + Send + 'u,
+    ) -> impl futures::Stream<Item = U> + Send + 'u
     where
-        T: Send + Sync,
-        U: Send,
+        T: Send + Sync + 'u,
+        U: Send + 'u,
     {
         async_stream::stream! {
             let mut this = self;
             let next_item_fn = &mut next_item_fn;
+            #[allow(clippy::while_let_loop)]
             loop {
-                let next_item = match this.read_ack_changed().await {
-                    Ok(next_changed) => {
-                        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| next_item_fn(&next_changed)));
-                        match result {
-                            Ok(Some(next_item)) => next_item,
-                            Ok(None) => {
-                                // Skip this value.
-                                continue;
-                            }
-                            Err(panicked) => {
-                                // Drop the read-lock to avoid poisoning it.
-                                drop(next_changed);
-                                // Forward the panic to the caller.
-                                std::panic::resume_unwind(panicked);
-                                // Unreachable
-                            }
-                        }
+                match this.map_changed(|next| next_item_fn(next)).await {
+                    Ok(next_item) => {
+                        yield next_item
                     }
                     Err(OrphanedSubscriberError) => {
                         // Stream exhausted after publisher disappeared.
-                        return;
+                        break;
                     }
-                };
-                yield next_item;
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "async-stream")]
+    pub fn into_changed_stream_filtered<'u, U>(
+        self,
+        mut next_item_fn: impl FnMut(&T) -> Option<U> + Send + 'u,
+    ) -> impl futures::Stream<Item = U> + Send + 'u
+    where
+        T: Send + Sync + 'u,
+        U: Send + 'u,
+    {
+        async_stream::stream! {
+            let mut this = self;
+            let next_item_fn = &mut next_item_fn;
+            #[allow(clippy::while_let_loop)]
+            loop {
+                match this.filter_map_changed(|next| next_item_fn(next)).await {
+                    Ok(next_item) => {
+                        yield next_item
+                    }
+                    Err(OrphanedSubscriberError) => {
+                        // Stream exhausted after publisher disappeared.
+                        break;
+                    }
+                }
             }
         }
     }
@@ -264,8 +295,11 @@ impl<T> Subscriber<T> {
 
 impl<T> Clone for Subscriber<T> {
     fn clone(&self) -> Self {
-        let Self { rx } = self;
-        Self::new(rx.clone())
+        let Self { rx, changed } = self;
+        Self {
+            rx: rx.clone(),
+            changed: *changed,
+        }
     }
 }
 

@@ -66,7 +66,25 @@ where
     fn read_ack(&'r mut self) -> R;
 
     // TODO: How to implement this async fn properly?
-    //async fn read_ack_changed(&'r mut self) -> Result<R, OrphanedSubscriberError>;
+    // async fn read_changed(&'r mut self) -> Result<R, OrphanedSubscriberError>;
+
+    // TODO: How to define and implement this async fn properly?
+    // async fn map_changed<U>(
+    //     &'r mut self,
+    //     mut map_fn: impl FnMut(&T) -> U,
+    // ) -> Result<U, OrphanedSubscriberError>;
+
+    // TODO: How to define and implement this async fn properly?
+    // async fn map_changed<U>(
+    //     &'r mut self,
+    //     mut map_fn: impl FnMut(&T) -> U,
+    // ) -> Result<U, OrphanedSubscriberError>;
+
+    // TODO: How to define and implement this async fn properly?
+    // async fn filter_map_changed<U>(
+    //     &mut self,
+    //     mut filter_map_fn: impl FnMut(&T) -> Option<U>,
+    // ) -> Result<U, OrphanedSubscriberError>
 }
 
 #[async_trait]

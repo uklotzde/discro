@@ -30,7 +30,7 @@ pub async fn observe_changes<T>(
     mut on_changed: impl FnMut(&T) -> OnChanged,
 ) {
     loop {
-        let Ok(next_changed_ref) = subscriber.read_ack_changed().await else {
+        let Ok(next_changed_ref) = subscriber.read_changed().await else {
             // Publisher has disappeared
             return;
         };
@@ -67,7 +67,7 @@ pub async fn capture_changes<S, T>(
 ) {
     let mut value = initial_value;
     loop {
-        let Ok(next_changed_ref) = subscriber.read_ack_changed().await else {
+        let Ok(next_changed_ref) = subscriber.read_changed().await else {
             // Publisher has disappeared.
             return;
         };
@@ -104,7 +104,7 @@ pub async fn capture_changes_async<S, T, F>(
 {
     let mut value = initial_value;
     loop {
-        let Ok(next_changed_ref) = subscriber.read_ack_changed().await else {
+        let Ok(next_changed_ref) = subscriber.read_changed().await else {
             // Publisher has disappeared.
             return;
         };
