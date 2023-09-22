@@ -244,8 +244,8 @@ impl<T> Subscriber<T> {
         mut next_item_fn: impl FnMut(&T) -> U + Send,
     ) -> impl futures::Stream<Item = U> + Send
     where
-        T: Send + Sync + 'static,
-        U: Send + 'static,
+        T: Send + Sync,
+        U: Send,
     {
         // Minimal, non-working dummy implementation to satisfy the compiler.
         async_stream::stream! {
@@ -267,8 +267,8 @@ impl<T> Subscriber<T> {
         mut next_item_fn: impl FnMut(&T) -> Option<U> + Send,
     ) -> impl futures::Stream<Item = U> + Send
     where
-        T: Send + Sync + 'static,
-        U: Send + 'static,
+        T: Send + Sync,
+        U: Send,
     {
         // Minimal, non-working dummy implementation to satisfy the compiler.
         async_stream::stream! {
