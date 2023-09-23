@@ -31,6 +31,8 @@ pub async fn observe_changes<T>(
     while let Ok(next_changed_ref) = subscriber.read_changed().await {
         let result =
             panic::catch_unwind(panic::AssertUnwindSafe(|| on_changed_fn(&next_changed_ref)));
+        // Drop the read-lock (to avoid poisoning it).
+        drop(next_changed_ref);
         match result {
             Ok(on_changed) => match on_changed {
                 OnChanged::Continue => {
@@ -43,8 +45,6 @@ pub async fn observe_changes<T>(
                 }
             },
             Err(panicked) => {
-                // Drop the read-lock to avoid poisoning it.
-                drop(next_changed_ref);
                 // Forward the panic to the caller.
                 panic::resume_unwind(panicked);
                 // Unreachable
@@ -71,26 +71,29 @@ pub async fn capture_changes<S, T>(
     mut on_changed_value_fn: impl FnMut(&T) -> OnChanged,
 ) {
     let mut value = initial_value;
-    while let Ok(next_changed_ref) = subscriber.read_changed().await {
-        let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-            capture_changed_value_fn(&value, &next_changed_ref)
-        }));
-        let changed_value = match result {
-            Ok(Some(changed_value)) => changed_value,
-            Ok(None) => {
-                // No new, changed value.
-                continue;
-            }
-            Err(panicked) => {
-                // Drop the read-lock to avoid poisoning it.
-                drop(next_changed_ref);
-                // Forward the panic to the caller.
-                panic::resume_unwind(panicked);
-                // Unreachable
+    loop {
+        let changed_value = {
+            let Ok(next_changed_ref) = subscriber.read_changed().await else {
+                // Publisher has disappeared.
+                break;
+            };
+            match panic::catch_unwind(panic::AssertUnwindSafe(|| {
+                capture_changed_value_fn(&value, &next_changed_ref)
+            })) {
+                Ok(Some(changed_value)) => changed_value,
+                Ok(None) => {
+                    // No new, changed value.
+                    continue;
+                }
+                Err(panicked) => {
+                    // Drop the read-lock to avoid poisoning it.
+                    drop(next_changed_ref);
+                    // Forward the panic to the caller.
+                    panic::resume_unwind(panicked);
+                    // Unreachable
+                }
             }
         };
-        // Release the read-lock.
-        drop(next_changed_ref);
         // Handle the changed value.
         value = changed_value;
         match on_changed_value_fn(&value) {
@@ -109,51 +112,59 @@ pub async fn capture_changes<S, T>(
 
 /// Capture changes asynchronously while observing a shared value.
 ///
-/// Same as [`capture_changes()`] with the only difference that
-/// the `on_changed_value` closure returns a future with the result.
-pub async fn capture_changes_async<S, T, F>(
+/// Same as [`capture_changes()`] with the only difference that the
+/// `on_changed_value_fn` closure returns a future with the result.
+#[allow(clippy::manual_async_fn)] // Required to validate the trait bounds of the return type.
+pub fn capture_changes_async<'a, S, T, F>(
     mut subscriber: Subscriber<S>,
     initial_value: T,
-    mut capture_changed_value_fn: impl FnMut(&T, &S) -> Option<T>,
-    mut on_changed_value_fn: impl FnMut(&T) -> F + Send + 'static,
-) where
-    S: Send + Sync + 'static,
-    T: Send + Sync + 'static,
-    F: Future<Output = OnChanged> + Send + 'static,
+    mut capture_changed_value_fn: impl FnMut(&T, &S) -> Option<T> + Send + 'a,
+    mut on_changed_value_fn: impl FnMut(&T) -> F + Send + 'a,
+) -> impl Future<Output = ()> + Send + 'a
+where
+    S: Send + Sync + 'a,
+    T: Send + Sync + 'a,
+    F: Future<Output = OnChanged> + Send + 'a,
 {
-    let mut value = initial_value;
-    while let Ok(next_changed_ref) = subscriber.read_changed().await {
-        let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-            capture_changed_value_fn(&value, &next_changed_ref)
-        }));
-        let changed_value = match result {
-            Ok(Some(changed_value)) => changed_value,
-            Ok(None) => {
-                // No new, changed value.
-                continue;
-            }
-            Err(panicked) => {
-                // Drop the read-lock to avoid poisoning it.
-                drop(next_changed_ref);
-                // Forward the panic to the caller.
-                panic::resume_unwind(panicked);
-                // Unreachable
-            }
-        };
-        // Release the read-lock.
-        drop(next_changed_ref);
-        // Handle the changed value.
-        value = changed_value;
-        match on_changed_value_fn(&value).await {
-            OnChanged::Continue => {
-                // Consumed.
-                continue;
-            }
-            OnChanged::Abort => {
-                // Aborted by the consumer.
-                return;
+    async move {
+        let capture_changed_value_fn = &mut capture_changed_value_fn;
+        let on_changed_value_fn = &mut on_changed_value_fn;
+        let mut value = initial_value;
+        loop {
+            let changed_value = {
+                let Ok(next_changed_ref) = subscriber.read_changed().await else {
+                    // Publisher has disappeared.
+                    break;
+                };
+                match panic::catch_unwind(panic::AssertUnwindSafe(|| {
+                    capture_changed_value_fn(&value, &next_changed_ref)
+                })) {
+                    Ok(Some(changed_value)) => changed_value,
+                    Ok(None) => {
+                        // No new, changed value.
+                        continue;
+                    }
+                    Err(panicked) => {
+                        // Drop the read-lock to avoid poisoning it.
+                        drop(next_changed_ref);
+                        // Forward the panic to the caller.
+                        panic::resume_unwind(panicked);
+                        // Unreachable
+                    }
+                }
+            };
+            // Handle the changed value.
+            value = changed_value;
+            match on_changed_value_fn(&value).await {
+                OnChanged::Continue => {
+                    // Consumed.
+                    continue;
+                }
+                OnChanged::Abort => {
+                    // Aborted by the consumer.
+                    return;
+                }
             }
         }
     }
-    // Publisher has disappeared.
 }
