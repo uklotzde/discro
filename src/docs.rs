@@ -33,48 +33,6 @@ impl<T> Deref for Ref<T> {
     }
 }
 
-/// Read-only projection of the [`Publisher`].
-///
-/// Could only be used for reading the current value or for subscribing.
-///
-/// Could be cloned to obtain multiple read-only projections.
-#[derive(Clone)]
-#[allow(missing_debug_implementations)]
-pub struct ReadOnlyPublisher<T> {
-    phantom: PhantomData<T>,
-}
-
-impl<T> ReadOnlyPublisher<T> {
-    /// Check if the publisher has subscribers.
-    ///
-    /// Returns `Some(true)` if at least one subscriber is connected
-    /// or `Some(false)` if the publisher is orphaned. Returns `None`
-    /// if the number of subscribers cannot be determined, e.g. if
-    /// more than a single instance of this type exists.
-    ///
-    /// After returning `Some(false)` once the result must never change
-    /// unless new [`ReadOnlyPublisher`]s are cloned from the actual
-    /// [`Publisher`]! This ensures that no race conditions could occur.
-    #[must_use]
-    pub fn has_subscribers(&self) -> Option<bool> {
-        unimplemented!()
-    }
-
-    /// Create a new subscription that is connected to this publisher.
-    #[must_use]
-    pub fn subscribe(&self) -> Subscriber<T> {
-        unimplemented!()
-    }
-
-    /// Obtain a reference to the most recent value.
-    ///
-    /// Outstanding borrows hold a read lock.
-    #[must_use]
-    pub fn read(&self) -> Ref<T> {
-        unimplemented!()
-    }
-}
-
 /// Read/write a shared value and emit change notifications on write.
 ///
 /// All write methods operate on a borrowed reference `&self` and therefore require
@@ -95,25 +53,26 @@ impl<T> Publisher<T> {
         unimplemented!()
     }
 
-    /// Create a new read-only publisher.
-    #[must_use]
-    pub fn clone_read_only(&self) -> ReadOnlyPublisher<T> {
-        unimplemented!()
-    }
-
-    /// [`ReadOnlyPublisher::has_subscribers`]
-    #[must_use]
-    pub fn has_subscribers(&self) -> Option<bool> {
-        unimplemented!()
-    }
-
-    /// [`ReadOnlyPublisher::subscribe`]
+    /// Subscribe to this publisher
+    ///
+    /// Listen for changes and read the shared value.
     #[must_use]
     pub fn subscribe(&self) -> Subscriber<T> {
         unimplemented!()
     }
 
-    /// [`ReadOnlyPublisher::read`]
+    /// Check if the publisher has subscribers.
+    ///
+    /// Returns `true` if at least one subscriber is connected
+    /// or `false` otherwise.
+    #[must_use]
+    pub fn has_subscribers(&self) -> bool {
+        unimplemented!()
+    }
+
+    /// Obtain a reference to the most recent value.
+    ///
+    /// Outstanding borrows hold a read lock.
     #[must_use]
     pub fn read(&self) -> Ref<T> {
         unimplemented!()

@@ -27,27 +27,17 @@ where
     S: Subscriber<'r, T, R>,
 {
     #[must_use]
-    fn has_subscribers(&self) -> Option<bool>;
+    fn has_subscribers(&self) -> bool;
 
     #[must_use]
     fn subscribe(&self) -> S;
 }
 
-pub(crate) trait ReadOnlyPublisher<'r, T, R, S>: Subscribable<'r, T, R, S> + Clone
+pub(crate) trait Publisher<'r, T, R, S>: Subscribable<'r, T, R, S>
 where
     R: Ref<T> + 'r,
     S: Subscriber<'r, T, R>,
 {
-}
-
-pub(crate) trait Publisher<'r, T, R, S, P>: Subscribable<'r, T, R, S>
-where
-    R: Ref<T> + 'r,
-    P: ReadOnlyPublisher<'r, T, R, S>,
-    S: Subscriber<'r, T, R>,
-{
-    fn clone_read_only(&self) -> P;
-
     fn write(&self, new_value: T);
 
     #[must_use]

@@ -8,7 +8,7 @@
 #![allow(missing_docs)]
 #![allow(clippy::missing_errors_doc)]
 
-use std::{ops::Deref, sync::Arc};
+use std::ops::Deref;
 
 use tokio::sync::watch;
 
@@ -26,97 +26,32 @@ impl<'r, T> Deref for Ref<'r, T> {
     }
 }
 
-#[must_use]
-fn publisher_has_subscribers<T>(watch_tx: &Arc<watch::Sender<T>>) -> Option<bool> {
-    if !watch_tx.is_closed() {
-        return Some(true);
-    }
-    debug_assert!(Arc::strong_count(watch_tx) >= 1);
-    debug_assert_eq!(Arc::weak_count(watch_tx), 0);
-    if Arc::strong_count(watch_tx) == 1 {
-        // No other publisher exists from which new subscribers
-        // could be created concurrently. This would otherwise
-        // cause race conditions when the channel is reopened.
-        return Some(false);
-    }
-    None
-}
-
-#[must_use]
-#[inline]
-fn publisher_subscribe<T>(watch_tx: &watch::Sender<T>) -> Subscriber<T> {
-    Subscriber::new(watch_tx.subscribe())
-}
-
-#[must_use]
-#[inline]
-fn publisher_read<T>(watch_tx: &watch::Sender<T>) -> Ref<'_, T> {
-    Ref(watch_tx.borrow())
-}
-
-#[derive(Debug)]
-pub struct ReadOnlyPublisher<T> {
-    tx: Arc<watch::Sender<T>>,
-}
-
-impl<T> Clone for ReadOnlyPublisher<T> {
-    fn clone(&self) -> Self {
-        Self {
-            tx: Arc::clone(&self.tx),
-        }
-    }
-}
-
-impl<T> ReadOnlyPublisher<T> {
-    #[must_use]
-    pub fn has_subscribers(&self) -> Option<bool> {
-        publisher_has_subscribers(&self.tx)
-    }
-
-    #[must_use]
-    pub fn subscribe(&self) -> Subscriber<T> {
-        publisher_subscribe(&self.tx)
-    }
-
-    #[must_use]
-    pub fn read(&self) -> Ref<'_, T> {
-        publisher_read(&self.tx)
-    }
-}
-
 #[derive(Debug)]
 pub struct Publisher<T> {
-    tx: Arc<watch::Sender<T>>,
+    tx: watch::Sender<T>,
 }
 
 impl<T> Publisher<T> {
     #[must_use]
     pub fn new(initial_value: T) -> Self {
         Self {
-            tx: Arc::new(watch::channel(initial_value).0),
+            tx: watch::channel(initial_value).0,
         }
     }
 
     #[must_use]
-    pub fn clone_read_only(&self) -> ReadOnlyPublisher<T> {
-        ReadOnlyPublisher {
-            tx: Arc::clone(&self.tx),
-        }
-    }
-
-    #[must_use]
-    pub fn has_subscribers(&self) -> Option<bool> {
-        publisher_has_subscribers(&self.tx)
+    pub fn has_subscribers(&self) -> bool {
+        !self.tx.is_closed()
     }
 
     #[must_use]
     pub fn subscribe(&self) -> Subscriber<T> {
-        publisher_subscribe(&self.tx)
+        Subscriber::new(self.tx.subscribe())
     }
 
     #[must_use]
     pub fn read(&self) -> Ref<'_, T> {
-        publisher_read(&self.tx)
+        Ref(self.tx.borrow())
     }
 
     pub fn write(&self, new_value: T) {
@@ -254,7 +189,7 @@ mod tests {
 mod traits {
     use async_trait::async_trait;
 
-    use super::{Publisher, ReadOnlyPublisher, Ref, Subscriber};
+    use super::{Publisher, Ref, Subscriber};
     use crate::OrphanedSubscriberError;
 
     // <https://github.com/rust-lang/api-guidelines/issues/223#issuecomment-683346783>
@@ -271,29 +206,8 @@ mod traits {
 
     impl<T> crate::traits::Ref<T> for Ref<'_, T> {}
 
-    impl<'r, T> crate::traits::Subscribable<'r, T, Ref<'r, T>, Subscriber<T>> for ReadOnlyPublisher<T> {
-        fn has_subscribers(&self) -> Option<bool> {
-            self.has_subscribers()
-        }
-
-        fn subscribe(&self) -> Subscriber<T> {
-            self.subscribe()
-        }
-    }
-
-    impl<'r, T> crate::traits::ReadOnlyPublisher<'r, T, Ref<'r, T>, Subscriber<T>>
-        for ReadOnlyPublisher<T>
-    {
-    }
-
-    impl<'r, T> crate::traits::Readable<'r, T, Ref<'r, T>> for ReadOnlyPublisher<T> {
-        fn read(&self) -> Ref<'_, T> {
-            self.read()
-        }
-    }
-
     impl<'r, T> crate::traits::Subscribable<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
-        fn has_subscribers(&self) -> Option<bool> {
+        fn has_subscribers(&self) -> bool {
             self.has_subscribers()
         }
 
@@ -302,13 +216,7 @@ mod traits {
         }
     }
 
-    impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>, ReadOnlyPublisher<T>>
-        for Publisher<T>
-    {
-        fn clone_read_only(&self) -> ReadOnlyPublisher<T> {
-            self.clone_read_only()
-        }
-
+    impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
         fn write(&self, new_value: T) {
             self.write(new_value);
         }
