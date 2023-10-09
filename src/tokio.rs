@@ -88,14 +88,11 @@ where
 #[derive(Debug)]
 pub struct Subscriber<T> {
     rx: watch::Receiver<T>,
-    // TODO: Remove the changed flag after upgrading to Tokio v1.33.0
-    changed: bool,
 }
 
 impl<T> Subscriber<T> {
-    fn new(mut rx: watch::Receiver<T>) -> Self {
-        let changed = rx.borrow_and_update().has_changed();
-        Self { rx, changed }
+    fn new(rx: watch::Receiver<T>) -> Self {
+        Self { rx }
     }
 
     #[must_use]
@@ -105,24 +102,15 @@ impl<T> Subscriber<T> {
 
     #[must_use]
     pub fn read_ack(&mut self) -> Ref<'_, T> {
-        if self.changed {
-            self.changed = false;
-        }
         Ref(self.rx.borrow_and_update())
     }
 
     pub fn mark_changed(&mut self) {
-        //FIXME: Requires Tokio v1.33.0
-        //self.rx.mark_changed();
-        self.changed = true;
+        self.rx.mark_changed();
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
-        if self.changed {
-            self.changed = false;
-            return Ok(());
-        }
         self.rx.changed().await.map_err(|_| OrphanedSubscriberError)
     }
 
@@ -145,13 +133,12 @@ impl<T> Subscriber<T> {
     }
 }
 
+// Implementing Clone manually is required because #[derive(Clone)] would
+// require T to be Clone, too.
 impl<T> Clone for Subscriber<T> {
     fn clone(&self) -> Self {
-        let Self { rx, changed } = self;
-        Self {
-            rx: rx.clone(),
-            changed: *changed,
-        }
+        let Self { rx } = self;
+        Self { rx: rx.clone() }
     }
 }
 
