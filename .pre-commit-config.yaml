@@ -8,7 +8,7 @@ default_stages:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.4.0
     hooks:
       - id: check-case-conflict
       - id: check-json
@@ -36,10 +36,15 @@ repos:
       - id: markdownlint-cli2
         exclude: ^LICENSE\.md$
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.6
+    rev: v2.2.5
     hooks:
       - id: codespell
         args: [--ignore-words=.codespellignore]
+  - repo: https://github.com/sirosen/check-jsonschema
+    rev: 0.26.3
+    hooks:
+      - id: check-github-actions
+      - id: check-github-workflows
   - repo: https://github.com/doublify/pre-commit-rust
     rev: v1.0
     hooks:
