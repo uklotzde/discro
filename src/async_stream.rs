@@ -11,7 +11,7 @@ use crate::{OrphanedSubscriberError, Subscriber};
 pub fn subscriber_into_changed_stream<'t, S, T>(
     mut subscriber: Subscriber<S>,
     mut next_item_fn: impl FnMut(&S) -> T + Send + 't,
-) -> impl futures::Stream<Item = T> + Send + 't
+) -> impl futures_core::Stream<Item = T> + Send + 't
 where
     S: Send + Sync + 't,
     T: Send + 't,
@@ -42,7 +42,7 @@ where
 pub fn subscriber_into_changed_stream_filtered<'t, S, T>(
     mut subscriber: Subscriber<S>,
     mut next_item_fn: impl FnMut(&S) -> Option<T> + Send + 't,
-) -> impl futures::Stream<Item = T> + Send + 't
+) -> impl futures_core::Stream<Item = T> + Send + 't
 where
     S: Send + Sync + 't,
     T: Send + 't,

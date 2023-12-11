@@ -15,7 +15,7 @@ include = ["/src", "/README.md", "/LICENSES"]
 
 [dependencies]
 async-stream = { version = "0.3.5", optional = true }
-futures = { version = "0.3.29", optional = true }
+futures-core = { version = "0.3.29", optional = true }
 thiserror = "1.0.50"
 
 [dependencies.tokio]
@@ -33,7 +33,7 @@ features = ["macros", "rt", "time"]
 
 [features]
 default = ["async-stream"]
-async-stream = ["dep:async-stream", "dep:futures"]
+async-stream = ["dep:async-stream", "dep:futures-core"]
 tokio = ["dep:tokio"]
 
 [lints.rust]
