@@ -35,3 +35,19 @@ features = ["macros", "rt", "time"]
 default = ["async-stream"]
 async-stream = ["dep:async-stream", "dep:futures"]
 tokio = ["dep:tokio"]
+
+[lints.rust]
+future_incompatible = "warn"
+let_underscore = "warn"
+missing_debug_implementations = "warn"
+rust_2018_idioms = "warn"
+rust_2021_compatibility = "warn"
+unreachable_pub = "warn"
+unsafe_code = "warn"
+unused = "warn"
+
+[lints.clippy]
+pedantic = "warn"
+clone_on_ref_ptr = "warn"
+missing_const_for_fn = "warn"
+self_named_module_files = "warn"

@@ -10,18 +10,6 @@
 //!
 //! - `tokio` implementation based on [`tokio::sync::watch`](https://docs.rs/tokio/latest/tokio/sync/watch/)
 
-#![warn(rust_2018_idioms)]
-#![warn(rust_2021_compatibility)]
-#![warn(missing_debug_implementations)]
-#![warn(missing_docs)]
-#![warn(unreachable_pub)]
-#![warn(unsafe_code)]
-#![warn(rustdoc::broken_intra_doc_links)]
-#![warn(clippy::pedantic)]
-// Additional restrictions
-#![warn(clippy::clone_on_ref_ptr)]
-#![warn(clippy::self_named_module_files)]
-
 use thiserror::Error;
 
 mod docs;
