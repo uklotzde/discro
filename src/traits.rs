@@ -7,8 +7,6 @@
 
 use std::ops::Deref;
 
-use async_trait::async_trait;
-
 use super::OrphanedSubscriberError;
 
 pub(crate) trait Ref<T>: Deref<Target = T> {}
@@ -77,7 +75,6 @@ where
     // ) -> Result<U, OrphanedSubscriberError>
 }
 
-#[async_trait]
 pub(crate) trait ChangeListener {
     fn mark_changed(&mut self);
     async fn changed(&mut self) -> Result<(), OrphanedSubscriberError>;

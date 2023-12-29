@@ -174,8 +174,6 @@ mod tests {
 
 #[cfg(test)]
 mod traits {
-    use async_trait::async_trait;
-
     use super::{Publisher, Ref, Subscriber};
     use crate::OrphanedSubscriberError;
 
@@ -238,7 +236,6 @@ mod traits {
         }
     }
 
-    #[async_trait]
     impl<T> crate::traits::ChangeListener for Subscriber<T>
     where
         T: Send + Sync,
