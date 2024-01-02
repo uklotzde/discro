@@ -16,8 +16,8 @@ include = ["/src", "/README.md", "/LICENSES"]
 
 [dependencies]
 async-stream = { version = "0.3.5", optional = true }
-futures-core = { version = "0.3.30", optional = true }
-thiserror = "1.0.52"
+futures-core = { version = "0.3.30", optional = true, default-features = false }
+thiserror = "1.0.56"
 
 [dependencies.tokio]
 version = "1.35.1"
