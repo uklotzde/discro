@@ -50,6 +50,13 @@ impl<T> Publisher<T> {
     }
 
     #[must_use]
+    pub fn subscribe_changed(&self) -> Subscriber<T> {
+        let mut subscriber = self.subscribe();
+        subscriber.mark_changed();
+        subscriber
+    }
+
+    #[must_use]
     pub fn read(&self) -> Ref<'_, T> {
         Ref(self.tx.borrow())
     }
@@ -198,6 +205,10 @@ mod traits {
 
         fn subscribe(&self) -> Subscriber<T> {
             self.subscribe()
+        }
+
+        fn subscribe_changed(&self) -> Subscriber<T> {
+            self.subscribe_changed()
         }
     }
 

@@ -29,6 +29,9 @@ where
 
     #[must_use]
     fn subscribe(&self) -> S;
+
+    #[must_use]
+    fn subscribe_changed(&self) -> S;
 }
 
 pub(crate) trait Publisher<'r, T, R, S>: Subscribable<'r, T, R, S>

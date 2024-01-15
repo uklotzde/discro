@@ -61,6 +61,14 @@ impl<T> Publisher<T> {
         unimplemented!()
     }
 
+    /// Subscribe to this publisher
+    ///
+    /// Marks the subscriber as _changed_ to receive the current value immediately.
+    #[must_use]
+    pub fn subscribe_changed(&self) -> Subscriber<T> {
+        unimplemented!()
+    }
+
     /// Check if the publisher has subscribers.
     ///
     /// Returns `true` if at least one subscriber is connected
