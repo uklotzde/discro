@@ -20,7 +20,7 @@ pub enum OnChanged {
 /// Observe a shared value.
 ///
 /// The `on_changed_fn` closure is invoked on every changed value.
-/// The shared value is locked during the invocation.
+/// The shared value is read-locked during the invocation!
 ///
 /// No `_async` variant of this function could be provided, because
 /// holding locks across yield points is not permitted.
@@ -59,7 +59,8 @@ pub async fn observe_changes<T>(
 /// The `capture_changed_value_fn` closure transforms a borrowed reference
 /// of the observed value into an owned instance of the captured value.
 /// Typically `Clone::clone` is used for this purpose if the
-/// observed and captured types are identical.
+/// observed and captured types are identical. Returning `None` indicates
+/// that the value has not changed.
 ///
 /// The `on_changed_value_fn` closure is invoked after each change. No locks are held
 /// during an invocation. The returned `OnChanged` enum determines whether
@@ -94,7 +95,7 @@ pub async fn capture_changes<S, T>(
                 }
             }
         };
-        // Handle the changed value.
+        // Handle the changed value after dropping the read-lock.
         value = changed_value;
         match on_changed_value_fn(&value) {
             OnChanged::Continue => {
@@ -123,7 +124,7 @@ pub fn capture_changes_async<'a, S, T, F>(
 ) -> impl Future<Output = ()> + Send + 'a
 where
     S: Send + Sync + 'a,
-    T: Send + Sync + 'a,
+    T: Send + 'a,
     F: Future<Output = OnChanged> + Send + 'a,
 {
     async move {
@@ -153,7 +154,7 @@ where
                     }
                 }
             };
-            // Handle the changed value.
+            // Handle the changed value asynchronously after dropping the read-lock.
             value = changed_value;
             match on_changed_value_fn(&value).await {
                 OnChanged::Continue => {

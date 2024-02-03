@@ -20,13 +20,13 @@ futures-core = { version = "0.3.30", optional = true, default-features = false }
 thiserror = "1.0.56"
 
 [dependencies.tokio]
-version = "1.35.1"
+version = "1.36.0"
 optional = true
 default-features = false
 features = ["sync"]
 
 [dev-dependencies.tokio]
-version = "1.35.1"
+version = "1.36.0"
 features = ["macros", "rt", "time"]
 
 [features]

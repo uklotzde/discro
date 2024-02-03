@@ -247,10 +247,7 @@ mod traits {
         }
     }
 
-    impl<T> crate::traits::ChangeListener for Subscriber<T>
-    where
-        T: Send + Sync,
-    {
+    impl<T> crate::traits::ChangeListener for Subscriber<T> {
         fn mark_changed(&mut self) {
             self.mark_changed();
         }
