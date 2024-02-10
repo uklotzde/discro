@@ -81,6 +81,10 @@ impl<T> Publisher<T> {
     {
         self.tx.send_if_modified(modify)
     }
+
+    pub fn set_modified(&self) {
+        self.modify(|_| true);
+    }
 }
 
 impl<T> Default for Publisher<T>
@@ -226,6 +230,10 @@ mod traits {
             M: FnOnce(&mut T) -> bool,
         {
             self.modify(modify)
+        }
+
+        fn set_modified(&self) {
+            self.set_modified();
         }
     }
 

@@ -47,6 +47,8 @@ where
     fn modify<M>(&self, modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool;
+
+    fn set_modified(&self);
 }
 
 pub(crate) trait Subscriber<'r, T, R>: Readable<'r, T, R> + Clone

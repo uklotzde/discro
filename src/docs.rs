@@ -134,6 +134,11 @@ impl<T> Publisher<T> {
         drop(modify);
         unimplemented!()
     }
+
+    /// Mark the current value as _modified_, i.e. _changed_ for all subscribers.
+    pub fn set_modified(&self) {
+        unimplemented!()
+    }
 }
 
 /// Read a shared value and receive change notifications asynchronously.
