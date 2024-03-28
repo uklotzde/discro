@@ -34,7 +34,7 @@ where
     fn subscribe_changed(&self) -> S;
 }
 
-pub(crate) trait Publisher<'r, T, R, S>: Subscribable<'r, T, R, S>
+pub(crate) trait Publisher<'r, T, R, S>: Subscribable<'r, T, R, S> + Clone
 where
     R: Ref<T> + 'r,
     S: Subscriber<'r, T, R>,

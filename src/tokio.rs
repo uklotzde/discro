@@ -87,6 +87,14 @@ impl<T> Publisher<T> {
     }
 }
 
+impl<T> Clone for Publisher<T> {
+    fn clone(&self) -> Self {
+        Self {
+            tx: self.tx.clone(),
+        }
+    }
+}
+
 impl<T> Default for Publisher<T>
 where
     T: Default,
