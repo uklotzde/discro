@@ -3,6 +3,7 @@
 
 //! Generic traits for verifying that implementations are compliant.
 
+#![allow(dead_code)]
 #![allow(missing_docs)]
 
 use std::ops::Deref;
