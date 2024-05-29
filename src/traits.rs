@@ -20,14 +20,11 @@ where
     fn read(&'r self) -> R;
 }
 
-pub(crate) trait Subscribable<'r, T, R, S>: Readable<'r, T, R>
+pub(crate) trait Subscribable<'r, T, R, S>
 where
     R: Ref<T> + 'r,
     S: Subscriber<'r, T, R>,
 {
-    #[must_use]
-    fn has_subscribers(&self) -> bool;
-
     #[must_use]
     fn subscribe(&self) -> S;
 
@@ -35,11 +32,19 @@ where
     fn subscribe_changed(&self) -> S;
 }
 
-pub(crate) trait Publisher<'r, T, R, S>: Subscribable<'r, T, R, S> + Clone
+pub(crate) trait Publisher<'r, T, R, O, S>:
+    Readable<'r, T, R> + Subscribable<'r, T, R, S>
 where
     R: Ref<T> + 'r,
+    O: Observer<'r, T, R, S>,
     S: Subscriber<'r, T, R>,
 {
+    #[must_use]
+    fn observe(&self) -> O;
+
+    #[must_use]
+    fn has_subscribers(&self) -> bool;
+
     fn write(&self, new_value: T);
 
     #[must_use]
@@ -50,6 +55,14 @@ where
         M: FnOnce(&mut T) -> bool;
 
     fn set_modified(&self);
+}
+
+pub(crate) trait Observer<'r, T, R, S>:
+    Readable<'r, T, R> + Subscribable<'r, T, R, S> + Clone
+where
+    R: Ref<T> + 'r,
+    S: Subscriber<'r, T, R>,
+{
 }
 
 pub(crate) trait Subscriber<'r, T, R>: Readable<'r, T, R> + Clone

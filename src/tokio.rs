@@ -40,6 +40,13 @@ impl<T> Publisher<T> {
     }
 
     #[must_use]
+    pub fn observe(&self) -> Observer<T> {
+        Observer {
+            tx: self.tx.clone(),
+        }
+    }
+
+    #[must_use]
     pub fn has_subscribers(&self) -> bool {
         !self.tx.is_closed()
     }
@@ -101,6 +108,38 @@ where
 {
     fn default() -> Self {
         Self::new(T::default())
+    }
+}
+
+#[derive(Debug)]
+pub struct Observer<T> {
+    tx: watch::Sender<T>,
+}
+
+impl<T> Observer<T> {
+    #[must_use]
+    pub fn subscribe(&self) -> Subscriber<T> {
+        Subscriber::new(self.tx.subscribe())
+    }
+
+    #[must_use]
+    pub fn subscribe_changed(&self) -> Subscriber<T> {
+        let mut subscriber = self.subscribe();
+        subscriber.mark_changed();
+        subscriber
+    }
+
+    #[must_use]
+    pub fn read(&self) -> Ref<'_, T> {
+        Ref(self.tx.borrow())
+    }
+}
+
+impl<T> Clone for Observer<T> {
+    fn clone(&self) -> Self {
+        Self {
+            tx: self.tx.clone(),
+        }
     }
 }
 
@@ -193,8 +232,9 @@ mod tests {
 
 #[cfg(test)]
 mod traits {
-    use super::{Publisher, Ref, Subscriber};
     use crate::OrphanedSubscriberError;
+
+    use super::{Observer, Publisher, Ref, Subscriber};
 
     // <https://github.com/rust-lang/api-guidelines/issues/223#issuecomment-683346783>
     const _: () = {
@@ -210,11 +250,25 @@ mod traits {
 
     impl<T> crate::traits::Ref<T> for Ref<'_, T> {}
 
-    impl<'r, T> crate::traits::Subscribable<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
-        fn has_subscribers(&self) -> bool {
-            self.has_subscribers()
+    impl<'r, T> crate::traits::Readable<'r, T, Ref<'r, T>> for Publisher<T> {
+        fn read(&self) -> Ref<'_, T> {
+            self.read()
         }
+    }
 
+    impl<'r, T> crate::traits::Readable<'r, T, Ref<'r, T>> for Observer<T> {
+        fn read(&self) -> Ref<'_, T> {
+            self.read()
+        }
+    }
+
+    impl<'r, T> crate::traits::Readable<'r, T, Ref<'r, T>> for Subscriber<T> {
+        fn read(&self) -> Ref<'_, T> {
+            self.read()
+        }
+    }
+
+    impl<'r, T> crate::traits::Subscribable<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
         fn subscribe(&self) -> Subscriber<T> {
             self.subscribe()
         }
@@ -224,7 +278,27 @@ mod traits {
         }
     }
 
-    impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Subscriber<T>> for Publisher<T> {
+    impl<'r, T> crate::traits::Subscribable<'r, T, Ref<'r, T>, Subscriber<T>> for Observer<T> {
+        fn subscribe(&self) -> Subscriber<T> {
+            self.subscribe()
+        }
+
+        fn subscribe_changed(&self) -> Subscriber<T> {
+            self.subscribe_changed()
+        }
+    }
+
+    impl<'r, T> crate::traits::Publisher<'r, T, Ref<'r, T>, Observer<T>, Subscriber<T>>
+        for Publisher<T>
+    {
+        fn observe(&self) -> Observer<T> {
+            self.observe()
+        }
+
+        fn has_subscribers(&self) -> bool {
+            self.has_subscribers()
+        }
+
         fn write(&self, new_value: T) {
             self.write(new_value);
         }
@@ -245,17 +319,7 @@ mod traits {
         }
     }
 
-    impl<'r, T> crate::traits::Readable<'r, T, Ref<'r, T>> for Publisher<T> {
-        fn read(&self) -> Ref<'_, T> {
-            self.read()
-        }
-    }
-
-    impl<'r, T> crate::traits::Readable<'r, T, Ref<'r, T>> for Subscriber<T> {
-        fn read(&self) -> Ref<'_, T> {
-            self.read()
-        }
-    }
+    impl<'r, T> crate::traits::Observer<'r, T, Ref<'r, T>, Subscriber<T>> for Observer<T> {}
 
     impl<'r, T> crate::traits::Subscriber<'r, T, Ref<'r, T>> for Subscriber<T> {
         fn read_ack(&mut self) -> Ref<'_, T> {

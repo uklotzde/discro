@@ -33,6 +33,14 @@ impl<T> Deref for Ref<T> {
     }
 }
 
+impl<T> Drop for Ref<T> {
+    fn drop(&mut self) {
+        unimplemented!();
+    }
+}
+
+/// Publisher of a shared value.
+///
 /// Read/write a shared value and emit change notifications on write.
 ///
 /// All write methods operate on a borrowed reference `&self` and therefore require
@@ -48,14 +56,20 @@ pub struct Publisher<T> {
 impl<T> Publisher<T> {
     /// Create a new publisher without subscribers.
     #[must_use]
-    pub fn new(initial_value: T) -> Self {
-        drop(initial_value);
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn new(#[allow(unused_variables)] initial_value: T) -> Self {
+        unimplemented!()
+    }
+
+    /// Create an [`Observer`] for read-only access.
+    #[must_use]
+    pub fn observe(&self) -> Observer<T> {
         unimplemented!()
     }
 
     /// Subscribe to this publisher
     ///
-    /// Listen for changes and read the shared value.
+    /// See also: [`Observer::subscribe()`]
     #[must_use]
     pub fn subscribe(&self) -> Subscriber<T> {
         unimplemented!()
@@ -63,7 +77,7 @@ impl<T> Publisher<T> {
 
     /// Subscribe to this publisher
     ///
-    /// Marks the subscriber as _changed_ to receive the current value immediately.
+    /// See also: [`Observer::subscribe_changed()`]
     #[must_use]
     pub fn subscribe_changed(&self) -> Subscriber<T> {
         unimplemented!()
@@ -78,9 +92,9 @@ impl<T> Publisher<T> {
         unimplemented!()
     }
 
-    /// Obtain a reference to the most recent value.
+    /// Obtain a reference to the current value.
     ///
-    /// Outstanding borrows hold a read lock.
+    /// See also: [`Observer::read()`]
     #[must_use]
     pub fn read(&self) -> Ref<T> {
         unimplemented!()
@@ -91,8 +105,8 @@ impl<T> Publisher<T> {
     ///
     /// The change notification is emitted unconditionally, i.e.
     /// independent of both the current and the new value.
-    pub fn write(&self, new_value: impl Into<T>) {
-        drop(new_value);
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn write(&self, #[allow(unused_variables)] new_value: impl Into<T>) {
         unimplemented!()
     }
 
@@ -104,8 +118,8 @@ impl<T> Publisher<T> {
     ///
     /// If you don't need the previous value, use [`write`](Self::write) instead.
     #[must_use]
-    pub fn replace(&self, new_value: impl Into<T>) -> T {
-        drop(new_value);
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn replace(&self, #[allow(unused_variables)] new_value: impl Into<T>) -> T {
         unimplemented!()
     }
 
@@ -127,11 +141,11 @@ impl<T> Publisher<T> {
     /// Return `false` to suppress change notifications, i.e. if
     /// the value has either not been modified or if the modification
     /// is not observable by subscribers.
-    pub fn modify<M>(&self, modify: M) -> bool
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn modify<M>(&self, #[allow(unused_variables)] modify: M) -> bool
     where
         M: FnOnce(&mut T) -> bool,
     {
-        drop(modify);
         unimplemented!()
     }
 
@@ -141,6 +155,50 @@ impl<T> Publisher<T> {
     }
 }
 
+/// Observer of a shared value.
+///
+/// Lightweight, cloneable [`Publisher`] for read-only access.
+#[allow(missing_debug_implementations)]
+pub struct Observer<T> {
+    phantom: PhantomData<T>,
+}
+
+impl<T> Observer<T> {
+    /// Obtain a reference to the current value.
+    ///
+    /// Outstanding borrows hold a read lock. Trying to read the value
+    /// again while already holding a read lock might cause a deadlock!
+    #[must_use]
+    pub fn read(&self) -> Ref<T> {
+        unimplemented!()
+    }
+    /// Subscribe to changes.
+    ///
+    /// Listen for changes of the shared value.
+    #[must_use]
+    pub fn subscribe(&self) -> Subscriber<T> {
+        unimplemented!()
+    }
+
+    /// Subscribe to changes.
+    ///
+    /// Listen for changes of the shared value.
+    ///
+    /// Marks the subscriber as _changed_ to receive the current value immediately.
+    #[must_use]
+    pub fn subscribe_changed(&self) -> Subscriber<T> {
+        unimplemented!()
+    }
+}
+
+impl<T> Clone for Observer<T> {
+    fn clone(&self) -> Self {
+        unimplemented!()
+    }
+}
+
+/// Subscriber of a shared value.
+///
 /// Read a shared value and receive change notifications asynchronously.
 ///
 /// If the initial value is considered as changed or not depends on both
@@ -156,6 +214,9 @@ pub struct Subscriber<T> {
 impl<T> Subscriber<T> {
     /// Read the current value
     ///
+    /// The current value is considered as _unseen_ until accessing it.
+    /// with [`read_ack()`](Self::read_ack).
+    ///
     /// Outstanding borrows hold a read lock. Trying to read the value
     /// again while already holding a read lock might cause a deadlock!
     #[must_use]
@@ -165,11 +226,11 @@ impl<T> Subscriber<T> {
 
     /// Read and acknowledge the current value
     ///
-    /// Outstanding borrows hold a read lock. Trying to read the value
-    /// again while already holding a read lock might cause a deadlock!
-    ///
     /// The current value is marked as _seen_ and therefore considered
     /// as _unchanged_ from now on.
+    ///
+    /// Outstanding borrows hold a read lock. Trying to read the value
+    /// again while already holding a read lock might cause a deadlock!
     #[must_use]
     pub fn read_ack(&mut self) -> Ref<T> {
         unimplemented!()
@@ -200,6 +261,10 @@ impl<T> Subscriber<T> {
     /// Read and acknowledge the next, changed value.
     ///
     /// Needed for creating streams with _at-most-once_ semantics.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the publisher has been dropped.
     #[allow(clippy::unused_async)]
     pub async fn read_changed(&mut self) -> Result<Ref<T>, OrphanedSubscriberError> {
         unimplemented!()
@@ -208,6 +273,10 @@ impl<T> Subscriber<T> {
     /// Capture the next, changed value.
     ///
     /// The temporary reference is mapped to a custom type before returning.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the publisher has been dropped.
     pub async fn map_changed<U>(
         &mut self,
         mut map_fn: impl FnMut(&T) -> U,
@@ -218,6 +287,10 @@ impl<T> Subscriber<T> {
     /// Capture the next, changed value conditionally.
     ///
     /// The temporary reference is filtered and mapped to a custom type before returning.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the publisher has been dropped.
     pub async fn filter_map_changed<U>(
         &mut self,
         mut filter_map_fn: impl FnMut(&T) -> Option<U>,
@@ -228,5 +301,11 @@ impl<T> Subscriber<T> {
                 return Ok(next_item);
             }
         }
+    }
+}
+
+impl<T> Clone for Subscriber<T> {
+    fn clone(&self) -> Self {
+        unimplemented!()
     }
 }
