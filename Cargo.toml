@@ -17,16 +17,16 @@ include = ["README.md", "LICENSES/", "src/"]
 [dependencies]
 async-stream = { version = "0.3.5", optional = true }
 futures-core = { version = "0.3.30", optional = true, default-features = false }
-thiserror = "1.0.58"
+thiserror = "1.0.63"
 
 [dependencies.tokio]
-version = "1.37.0"
+version = "1.39.1"
 optional = true
 default-features = false
 features = ["sync"]
 
 [dev-dependencies.tokio]
-version = "1.37.0"
+version = "1.39.1"
 features = ["macros", "rt", "time"]
 
 [features]

@@ -33,7 +33,7 @@ where
 }
 
 pub(crate) trait Publisher<'r, T, R, O, S>:
-    Readable<'r, T, R> + Subscribable<'r, T, R, S>
+    Readable<'r, T, R> + Subscribable<'r, T, R, S> + Clone
 where
     R: Ref<T> + 'r,
     O: Observer<'r, T, R, S>,
