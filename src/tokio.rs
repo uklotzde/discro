@@ -18,7 +18,7 @@ use crate::subscriber::{filter_map_changed, map_changed};
 #[derive(Debug)]
 pub struct Ref<'r, T>(watch::Ref<'r, T>);
 
-impl<'r, T> Deref for Ref<'r, T> {
+impl<T> Deref for Ref<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -149,7 +149,7 @@ pub struct Subscriber<T> {
 }
 
 impl<T> Subscriber<T> {
-    fn new(rx: watch::Receiver<T>) -> Self {
+    const fn new(rx: watch::Receiver<T>) -> Self {
         Self { rx }
     }
 
