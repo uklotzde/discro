@@ -5,7 +5,7 @@ use std::panic;
 
 use crate::{OrphanedSubscriberError, Subscriber};
 
-#[allow(dead_code)]
+#[allow(dead_code, reason = "Unused by default features.")]
 pub(crate) async fn map_changed<S, T>(
     subscriber: &mut Subscriber<S>,
     mut map_fn: impl FnMut(&S) -> T,
@@ -24,7 +24,7 @@ pub(crate) async fn map_changed<S, T>(
     }
 }
 
-#[allow(dead_code)]
+#[allow(dead_code, reason = "Unused by default features.")]
 pub(crate) async fn filter_map_changed<S, T>(
     subscriber: &mut Subscriber<S>,
     mut filter_map_fn: impl FnMut(&S) -> Option<T>,
