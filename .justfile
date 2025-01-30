@@ -29,7 +29,7 @@ setup:
     # Ignore rustup failures, because not everyone might use it
     rustup self update || true
     # cargo-edit is needed for `cargo upgrade`
-    cargo install cargo-edit just
+    cargo install cargo-deny cargo-edit just
     pip install -U pre-commit
     #pre-commit install --hook-type commit-msg --hook-type pre-commit
 
