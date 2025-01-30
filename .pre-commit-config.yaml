@@ -30,49 +30,49 @@ repos:
       - id: commitlint
         stages:
           - commit-msg
-  - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.17.2
-    hooks:
-      - id: markdownlint-cli2
-        exclude: ^LICENSE\.md$
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
       - id: codespell
         args: [--ignore-words=.codespellignore]
+  # JSON
   - repo: https://github.com/sirosen/check-jsonschema
     rev: 0.31.0
     hooks:
       - id: check-github-actions
       - id: check-github-workflows
-  - repo: https://github.com/doublify/pre-commit-rust
-    rev: v1.0
+  # Markdown
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.17.2
     hooks:
-      - id: fmt
-        args: [--all, --]
-      - id: clippy
-        args:
-          [
-            --locked,
-            --workspace,
-            --all-features,
-            --all-targets,
-            --,
-            -D,
-            warnings,
-          ]
+      - id: markdownlint-cli2
+        exclude: ^LICENSE\.md$
+  # TODO: Remove unmaintained Prettier plugin.
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v3.1.0
     hooks:
       - id: prettier
         types_or:
           - markdown
-          - yaml
-  # https://reuse.software
-  - repo: https://github.com/fsfe/reuse-tool
-    rev: v5.0.2
+  # YAML
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.15.0
     hooks:
-      - id: reuse
+      - id: yamlfmt
+  # TOML
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: taplo-format
+      - id: taplo-lint
+  # Licensing: https://reuse.software
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+        args: [--all, --]
+      - id: clippy
+        args: [--locked, --workspace, --all-features, --all-targets, --, -D, warnings]
   - repo: local
     hooks:
       - id: cargo-doc
