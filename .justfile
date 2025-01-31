@@ -42,3 +42,6 @@ upgrade: setup
 # Run pre-commit hooks
 pre-commit:
     pre-commit run --all-files
+
+audit-dependencies:
+    cargo deny check

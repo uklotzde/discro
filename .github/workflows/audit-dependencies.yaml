@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 # Same as file name
-name: dependency-audit
+name: audit-dependencies
 
 permissions:
   contents: read
@@ -21,7 +21,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Generate Cargo.lock
+        run: cargo generate-lockfile
 
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
