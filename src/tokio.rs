@@ -84,7 +84,8 @@ impl<T> Publisher<T> {
         self.tx.send_replace(new_value)
     }
 
-    fn modify<M, N>(&self, modify: M) -> N
+    #[allow(clippy::missing_panics_doc, reason = "Never panics.")]
+    pub fn modify<M, N>(&self, modify: M) -> N
     where
         M: FnOnce(&mut T) -> N,
         N: ModifyReturn,
