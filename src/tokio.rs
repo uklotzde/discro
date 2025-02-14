@@ -232,7 +232,7 @@ mod tests {
 
 #[cfg(test)]
 mod traits {
-    use crate::OrphanedSubscriberError;
+    use crate::{ModifyReturn, OrphanedSubscriberError};
 
     use super::{Observer, Publisher, Ref, Subscriber};
 
@@ -307,11 +307,22 @@ mod traits {
             self.replace(new_value)
         }
 
-        fn modify<M>(&self, modify: M) -> bool
+        fn modify<M, N>(&self, modify: M) -> N
         where
-            M: FnOnce(&mut T) -> bool,
+            M: FnOnce(&mut T) -> N,
+            N: ModifyReturn,
         {
-            self.modify(modify)
+            // Workaround for the missing extensibility in Tokio.
+            // For N = bool this boils down to `self.modify(modify)`.
+            // See also: <https://github.com/tokio-rs/tokio/pull/7157>
+            let mut modified = None;
+            self.modify(|value| {
+                let return_value = modify(value);
+                let is_modified = return_value.is_modified();
+                modified = Some(return_value);
+                is_modified
+            });
+            modified.expect("has been set by the closure in the locking scope")
         }
 
         fn set_modified(&self) {

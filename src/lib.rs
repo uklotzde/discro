@@ -20,6 +20,26 @@ pub use self::docs::*;
 #[cfg(test)]
 mod traits;
 
+/// Return value of [`Publisher::modify`].
+///
+/// Allows to capture data from within the locking scope.
+/// If the modification does not capture and return any data
+/// then `bool` could be used.
+pub trait ModifyReturn {
+    /// Indicates if the shared value has been modified.
+    ///
+    /// Returns `true` if the shared value has been modified
+    /// by a publisher and subscribers need to be notified.
+    /// Returns `false` if the shared value is unchanged.
+    fn is_modified(&self) -> bool;
+}
+
+impl ModifyReturn for bool {
+    fn is_modified(&self) -> bool {
+        *self
+    }
+}
+
 /// Indicates that the publisher has been dropped.
 #[derive(Error, Debug)]
 #[error("disconnected from publisher")]

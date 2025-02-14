@@ -8,6 +8,8 @@
 
 use std::ops::Deref;
 
+use crate::ModifyReturn;
+
 use super::OrphanedSubscriberError;
 
 pub(crate) trait Ref<T>: Deref<Target = T> {}
@@ -50,9 +52,10 @@ where
     #[must_use]
     fn replace(&self, new_value: T) -> T;
 
-    fn modify<M>(&self, modify: M) -> bool
+    fn modify<M, N>(&self, modify: M) -> N
     where
-        M: FnOnce(&mut T) -> bool;
+        M: FnOnce(&mut T) -> N,
+        N: ModifyReturn;
 
     fn set_modified(&self);
 }
