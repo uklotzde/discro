@@ -5,15 +5,17 @@
 //! opinionated API comprising of more recognizable function names
 //! and hiding of unneeded features.
 
-#![allow(missing_docs)]
-#![allow(clippy::missing_errors_doc)]
+#![expect(missing_docs)]
+#![expect(clippy::missing_errors_doc)]
 
 use std::ops::Deref;
 
 use tokio::sync::watch;
 
-use super::OrphanedSubscriberError;
-use crate::subscriber::{filter_map_changed, map_changed};
+use crate::{
+    subscriber::{filter_map_changed, map_changed},
+    ModifyReturn, OrphanedSubscriberError,
+};
 
 #[derive(Debug)]
 pub struct Ref<'r, T>(watch::Ref<'r, T>);
@@ -82,11 +84,22 @@ impl<T> Publisher<T> {
         self.tx.send_replace(new_value)
     }
 
-    pub fn modify<M>(&self, modify: M) -> bool
+    fn modify<M, N>(&self, modify: M) -> N
     where
-        M: FnOnce(&mut T) -> bool,
+        M: FnOnce(&mut T) -> N,
+        N: ModifyReturn,
     {
-        self.tx.send_if_modified(modify)
+        // Workaround for the missing extensibility in Tokio.
+        // For N = bool this boils down to `self.modify(modify)`.
+        // See also: <https://github.com/tokio-rs/tokio/pull/7157>
+        let mut modified = None;
+        self.tx.send_if_modified(|value| {
+            let return_value = modify(value);
+            let is_modified = return_value.is_modified();
+            modified = Some(return_value);
+            is_modified
+        });
+        modified.expect("has been set by the closure in the locking scope")
     }
 
     pub fn set_modified(&self) {
@@ -167,7 +180,6 @@ impl<T> Subscriber<T> {
         self.rx.mark_changed();
     }
 
-    #[allow(clippy::missing_errors_doc)]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
         self.rx.changed().await.map_err(|_| OrphanedSubscriberError)
     }
@@ -312,17 +324,7 @@ mod traits {
             M: FnOnce(&mut T) -> N,
             N: ModifyReturn,
         {
-            // Workaround for the missing extensibility in Tokio.
-            // For N = bool this boils down to `self.modify(modify)`.
-            // See also: <https://github.com/tokio-rs/tokio/pull/7157>
-            let mut modified = None;
-            self.modify(|value| {
-                let return_value = modify(value);
-                let is_modified = return_value.is_modified();
-                modified = Some(return_value);
-                is_modified
-            });
-            modified.expect("has been set by the closure in the locking scope")
+            self.modify(modify)
         }
 
         fn set_modified(&self) {

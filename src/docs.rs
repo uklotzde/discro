@@ -9,7 +9,7 @@
 
 use std::{marker::PhantomData, ops::Deref};
 
-use super::OrphanedSubscriberError;
+use crate::{ModifyReturn, OrphanedSubscriberError};
 
 /// A borrowed reference to the shared value.
 ///
@@ -134,17 +134,20 @@ impl<T> Publisher<T> {
     /// a change notification is sent or not. This result is
     /// finally returned.
     ///
-    /// Return `true` to notify subscribers about the change, i.e.
-    /// if the value has been modified and the modification is
-    /// observable by subscribers.
+    /// If `ModifyReturn::is_modified()` returns `true` then subscribers are
+    /// notified about the change, i.e. if the value has actually been modified
+    /// and the modification is observable by subscribers.
     ///
-    /// Return `false` to suppress change notifications, i.e. if
-    /// the value has either not been modified or if the modification
+    /// If `ModifyReturn::is_modified()` returns `false` subscribers are not notified.
+    /// This is appropriate if the value has either not been modified or if the modification
     /// is not observable by subscribers.
+    ///
+    /// Use `bool` for `N` if you don't need to capture data from within the locking scope.
     #[allow(clippy::needless_pass_by_value)]
-    pub fn modify<M>(&self, #[allow(unused_variables)] modify: M) -> bool
+    pub fn modify<M, N>(&self, #[allow(unused_variables)] modify: M) -> N
     where
-        M: FnOnce(&mut T) -> bool,
+        M: FnOnce(&mut T) -> N,
+        N: ModifyReturn,
     {
         unimplemented!()
     }

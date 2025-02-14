@@ -115,7 +115,7 @@ pub async fn capture_changes<S, T>(
 ///
 /// Same as [`capture_changes()`] with the only difference that the
 /// `on_changed_value_fn` closure returns a future with the result.
-#[allow(clippy::manual_async_fn)] // Required to validate the trait bounds of the return type.
+#[expect(clippy::manual_async_fn)] // Required to validate the trait bounds of the return type.
 pub fn capture_changes_async<'a, S, T, F>(
     mut subscriber: Subscriber<S>,
     initial_value: T,

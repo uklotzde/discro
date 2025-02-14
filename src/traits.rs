@@ -3,14 +3,11 @@
 
 //! Generic traits for verifying that implementations are compliant.
 
-#![allow(dead_code)]
-#![allow(missing_docs)]
+#![expect(dead_code)]
 
 use std::ops::Deref;
 
-use crate::ModifyReturn;
-
-use super::OrphanedSubscriberError;
+use crate::{ModifyReturn, OrphanedSubscriberError};
 
 pub(crate) trait Ref<T>: Deref<Target = T> {}
 

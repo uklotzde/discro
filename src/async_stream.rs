@@ -18,7 +18,7 @@ where
 {
     async_stream::stream! {
         let next_item_fn = &mut next_item_fn;
-        #[allow(clippy::while_let_loop)]
+        #[expect(clippy::while_let_loop)]
         loop {
             match subscriber.map_changed(|next| next_item_fn(next)).await {
                 Ok(next_item) => {
@@ -49,7 +49,7 @@ where
 {
     async_stream::stream! {
         let next_item_fn = &mut next_item_fn;
-        #[allow(clippy::while_let_loop)]
+        #[expect(clippy::while_let_loop)]
         loop {
             match subscriber.filter_map_changed(|next| next_item_fn(next)).await {
                 Ok(next_item) => {
