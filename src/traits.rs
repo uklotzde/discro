@@ -7,7 +7,7 @@
 
 use std::ops::Deref;
 
-use crate::{ModifyReturn, OrphanedSubscriberError};
+use crate::{ModifyStatus, OrphanedSubscriberError};
 
 pub(crate) trait Ref<T>: Deref<Target = T> {}
 
@@ -52,7 +52,7 @@ where
     fn modify<M, N>(&self, modify: M) -> N
     where
         M: FnOnce(&mut T) -> N,
-        N: ModifyReturn;
+        N: ModifyStatus;
 
     fn set_modified(&self);
 }

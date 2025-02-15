@@ -25,7 +25,7 @@ mod traits;
 /// Allows to capture data from within the locking scope.
 /// If the modification does not capture and return any data
 /// then `bool` could be used.
-pub trait ModifyReturn {
+pub trait ModifyStatus {
     /// Indicates if the shared value has been modified.
     ///
     /// Returns `true` if the shared value has been modified
@@ -34,7 +34,7 @@ pub trait ModifyReturn {
     fn is_modified(&self) -> bool;
 }
 
-impl ModifyReturn for bool {
+impl ModifyStatus for bool {
     fn is_modified(&self) -> bool {
         *self
     }

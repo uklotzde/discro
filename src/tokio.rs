@@ -14,7 +14,7 @@ use tokio::sync::watch;
 
 use crate::{
     subscriber::{filter_map_changed, map_changed},
-    ModifyReturn, OrphanedSubscriberError,
+    ModifyStatus, OrphanedSubscriberError,
 };
 
 #[derive(Debug)]
@@ -88,7 +88,7 @@ impl<T> Publisher<T> {
     pub fn modify<M, N>(&self, modify: M) -> N
     where
         M: FnOnce(&mut T) -> N,
-        N: ModifyReturn,
+        N: ModifyStatus,
     {
         // Workaround for the missing extensibility in Tokio.
         // For N = bool this boils down to `self.modify(modify)`.
@@ -245,7 +245,7 @@ mod tests {
 
 #[cfg(test)]
 mod traits {
-    use crate::{ModifyReturn, OrphanedSubscriberError};
+    use crate::{ModifyStatus, OrphanedSubscriberError};
 
     use super::{Observer, Publisher, Ref, Subscriber};
 
@@ -323,7 +323,7 @@ mod traits {
         fn modify<M, N>(&self, modify: M) -> N
         where
             M: FnOnce(&mut T) -> N,
-            N: ModifyReturn,
+            N: ModifyStatus,
         {
             self.modify(modify)
         }
