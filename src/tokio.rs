@@ -14,7 +14,7 @@ use tokio::sync::watch;
 
 use crate::{
     subscriber::{filter_map_changed, map_changed},
-    ModifyStatus, OrphanedSubscriberError,
+    ModifiedStatus, OrphanedSubscriberError,
 };
 
 #[derive(Debug)]
@@ -88,19 +88,20 @@ impl<T> Publisher<T> {
     pub fn modify<M, N>(&self, modify: M) -> N
     where
         M: FnOnce(&mut T) -> N,
-        N: ModifyStatus,
+        N: ModifiedStatus,
     {
         // Workaround for the missing extensibility in Tokio.
         // For N = bool this boils down to `self.modify(modify)`.
         // See also: <https://github.com/tokio-rs/tokio/pull/7157>
-        let mut modified = None;
+        let mut modified_status_holder = None;
         self.tx.send_if_modified(|value| {
-            let return_value = modify(value);
-            let is_modified = return_value.is_modified();
-            modified = Some(return_value);
+            let modified_status = modify(value);
+            let is_modified = modified_status.is_modified();
+            modified_status_holder = Some(modified_status);
             is_modified
         });
-        modified.expect("has been set by the closure in the locking scope")
+        modified_status_holder
+            .expect("has been set by invoking the modify closure in the locking scope")
     }
 
     pub fn set_modified(&self) {
@@ -245,7 +246,7 @@ mod tests {
 
 #[cfg(test)]
 mod traits {
-    use crate::{ModifyStatus, OrphanedSubscriberError};
+    use crate::{ModifiedStatus, OrphanedSubscriberError};
 
     use super::{Observer, Publisher, Ref, Subscriber};
 
@@ -323,7 +324,7 @@ mod traits {
         fn modify<M, N>(&self, modify: M) -> N
         where
             M: FnOnce(&mut T) -> N,
-            N: ModifyStatus,
+            N: ModifiedStatus,
         {
             self.modify(modify)
         }

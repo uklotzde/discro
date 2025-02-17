@@ -9,7 +9,7 @@
 
 use std::{marker::PhantomData, ops::Deref};
 
-use crate::{ModifyStatus, OrphanedSubscriberError};
+use crate::{ModifiedStatus, OrphanedSubscriberError};
 
 /// A borrowed reference to the shared value.
 ///
@@ -134,11 +134,11 @@ impl<T> Publisher<T> {
     /// a change notification is sent or not. This result is
     /// finally returned.
     ///
-    /// If `ModifyStatus::is_modified()` returns `true` then subscribers are
+    /// If `ModifiedStatus::is_modified()` returns `true` then subscribers are
     /// notified about the change, i.e. if the value has actually been modified
     /// and the modification is observable by subscribers.
     ///
-    /// If `ModifyStatus::is_modified()` returns `false` subscribers are not notified.
+    /// If `ModifiedStatus::is_modified()` returns `false` subscribers are not notified.
     /// This is appropriate if the value has either not been modified or if the modification
     /// is not observable by subscribers.
     ///
@@ -147,7 +147,7 @@ impl<T> Publisher<T> {
     pub fn modify<M, N>(&self, #[allow(unused_variables)] modify: M) -> N
     where
         M: FnOnce(&mut T) -> N,
-        N: ModifyStatus,
+        N: ModifiedStatus,
     {
         unimplemented!()
     }

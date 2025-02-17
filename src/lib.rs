@@ -25,16 +25,18 @@ mod traits;
 /// Allows to capture data from within the locking scope.
 /// If the modification does not capture and return any data
 /// then `bool` could be used.
-pub trait ModifyStatus {
+pub trait ModifiedStatus {
     /// Indicates if the shared value has been modified.
     ///
     /// Returns `true` if the shared value has been modified
     /// by a publisher and subscribers need to be notified.
     /// Returns `false` if the shared value is unchanged.
+    ///
+    /// See also: `[Publisher::set_modified]`.
     fn is_modified(&self) -> bool;
 }
 
-impl ModifyStatus for bool {
+impl ModifiedStatus for bool {
     fn is_modified(&self) -> bool {
         *self
     }
