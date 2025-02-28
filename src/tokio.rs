@@ -13,8 +13,8 @@ use std::ops::Deref;
 use tokio::sync::watch;
 
 use crate::{
-    subscriber::{filter_map_changed, map_changed},
     ModifiedStatus, OrphanedSubscriberError,
+    subscriber::{filter_map_changed, map_changed},
 };
 
 #[derive(Debug)]

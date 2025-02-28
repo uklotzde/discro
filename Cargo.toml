@@ -10,8 +10,8 @@ readme = "README.md"
 repository = "https://github.com/uklotzde/discro"
 keywords = ["async", "await", "reactive", "observable", "synchronization"]
 categories = ["asynchronous", "concurrency"]
-rust-version = "1.75"
-edition = "2021"
+rust-version = "1.85"
+edition = "2024"
 include = ["README.md", "LICENSES/", "src/"]
 
 [dependencies]
