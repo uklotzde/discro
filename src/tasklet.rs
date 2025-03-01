@@ -116,17 +116,17 @@ pub async fn capture_changes<S, T>(
 /// Same as [`capture_changes()`] with the only difference that the
 /// `on_changed_value_fn` closure returns a future with the result.
 #[expect(clippy::manual_async_fn)] // Required to validate the trait bounds of the return type.
-pub fn capture_changes_async<'a, S, T, F>(
+pub fn capture_changes_async<S, T, F>(
     mut subscriber: Subscriber<S>,
     initial_value: T,
-    mut capture_changed_value_fn: impl FnMut(&mut T, &S) -> bool + Send + 'a,
-    mut on_changed_value_fn: impl FnMut(&T) -> F + Send + 'a,
-) -> impl Future<Output = ()> + Send + 'a
+    mut capture_changed_value_fn: impl FnMut(&mut T, &S) -> bool + Send,
+    mut on_changed_value_fn: impl FnMut(&T) -> F + Send,
+) -> impl Future<Output = ()> + Send
 where
     // `tokio::watch::Receiver<S>` is only `Send` if `S` is both `Send` and `Sync`
-    S: Send + Sync + 'a,
-    T: Send + 'a,
-    F: Future<Output = OnChanged> + Send + 'a,
+    S: Send + Sync,
+    T: Send,
+    F: Future<Output = OnChanged> + Send,
 {
     async move {
         let capture_changed_value_fn = &mut capture_changed_value_fn;
