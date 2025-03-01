@@ -8,13 +8,13 @@ use crate::{OrphanedSubscriberError, Subscriber};
 /// Returns a stream of changed values.
 ///
 /// The `next_item_fn` closure is invoked on a borrowed value while the lock is held.
-pub fn subscriber_into_changed_stream<'t, S, T>(
+pub fn subscriber_into_changed_stream<S, T>(
     mut subscriber: Subscriber<S>,
-    mut next_item_fn: impl FnMut(&S) -> T + Send + 't,
-) -> impl futures_core::Stream<Item = T> + Send + 't
+    mut next_item_fn: impl FnMut(&S) -> T + Send,
+) -> impl futures_core::Stream<Item = T> + Send
 where
-    S: Send + Sync + 't,
-    T: Send + 't,
+    S: Send + Sync,
+    T: Send,
 {
     async_stream::stream! {
         let next_item_fn = &mut next_item_fn;
@@ -39,13 +39,13 @@ where
 /// `next_item_fn` returns `Some`.
 ///
 /// The `next_item_fn` closure is invoked on a borrowed value while the lock is held.
-pub fn subscriber_into_changed_stream_filtered<'t, S, T>(
+pub fn subscriber_into_changed_stream_filtered<S, T>(
     mut subscriber: Subscriber<S>,
-    mut next_item_fn: impl FnMut(&S) -> Option<T> + Send + 't,
-) -> impl futures_core::Stream<Item = T> + Send + 't
+    mut next_item_fn: impl FnMut(&S) -> Option<T> + Send,
+) -> impl futures_core::Stream<Item = T> + Send
 where
-    S: Send + Sync + 't,
-    T: Send + 't,
+    S: Send + Sync,
+    T: Send,
 {
     async_stream::stream! {
         let next_item_fn = &mut next_item_fn;
