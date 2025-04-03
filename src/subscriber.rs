@@ -37,7 +37,7 @@ pub(crate) async fn filter_map_changed<S, T>(
                 return Ok(next_item);
             }
             Ok(None) => {
-                continue;
+                // Continue.
             }
             Err(panicked) => {
                 // Drop the read-lock to avoid poisoning it.

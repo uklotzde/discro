@@ -36,8 +36,7 @@ pub async fn observe_changes<T>(
         match result {
             Ok(on_changed) => match on_changed {
                 OnChanged::Continue => {
-                    // Consumed.
-                    continue;
+                    // Consumed -> continue.
                 }
                 OnChanged::Abort => {
                     // Aborted by the consumer.
@@ -99,8 +98,7 @@ pub async fn capture_changes<S, T>(
         // Handle the changed value after dropping the read-lock.
         match on_changed_value_fn(&value) {
             OnChanged::Continue => {
-                // Consumed.
-                continue;
+                // Consumed -> continue.
             }
             OnChanged::Abort => {
                 // Aborted by the consumer.
@@ -158,8 +156,7 @@ where
             // Handle the changed value asynchronously after dropping the read-lock.
             match on_changed_value_fn(&value).await {
                 OnChanged::Continue => {
-                    // Consumed.
-                    continue;
+                    // Consumed -> continue.
                 }
                 OnChanged::Abort => {
                     // Aborted by the consumer.
