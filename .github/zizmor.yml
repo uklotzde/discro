@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: The discro authors
+# SPDX-License-Identifier: CC0-1.0
+
+rules:
+  unpinned-uses:
+    # TODO: Pin SHA of all untrusted GitHub actions.
+    ignore:
+      - audit-dependencies.yaml
+      - pre-commit.yaml
+      - test.yaml
