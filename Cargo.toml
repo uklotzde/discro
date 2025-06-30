@@ -15,18 +15,18 @@ edition = "2024"
 include = ["README.md", "LICENSES/", "src/"]
 
 [dependencies]
-async-stream = { version = "0.3.5", optional = true }
-futures-core = { version = "0.3.30", optional = true, default-features = false }
-thiserror = "2.0.10"
+async-stream = { version = "0.3.6", optional = true }
+futures-core = { version = "0.3.31", optional = true, default-features = false }
+thiserror = "2.0.12"
 
 [dependencies.tokio]
-version = "1.39.1"
+version = "1.45.1"
 optional = true
 default-features = false
 features = ["sync"]
 
 [dev-dependencies.tokio]
-version = "1.39.1"
+version = "1.45.1"
 features = ["macros", "rt", "time"]
 
 [features]
