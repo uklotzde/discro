@@ -37,7 +37,7 @@ impl<T> Publisher<T> {
     #[must_use]
     pub fn new(initial_value: T) -> Self {
         Self {
-            tx: watch::channel(initial_value).0,
+            tx: watch::Sender::new(initial_value),
         }
     }
 
@@ -109,6 +109,8 @@ impl<T> Publisher<T> {
     }
 }
 
+// Implementing Clone manually is required because #[derive(Clone)] would
+// require T to be Clone, too.
 impl<T> Clone for Publisher<T> {
     fn clone(&self) -> Self {
         Self {
@@ -116,6 +118,15 @@ impl<T> Clone for Publisher<T> {
         }
     }
 }
+
+impl<T> PartialEq for Publisher<T> {
+    fn eq(&self, other: &Self) -> bool {
+        let Self { tx } = self;
+        tx.same_channel(&other.tx)
+    }
+}
+
+impl<T> Eq for Publisher<T> {}
 
 impl<T> Default for Publisher<T>
 where
@@ -150,6 +161,8 @@ impl<T> Observer<T> {
     }
 }
 
+// Implementing Clone manually is required because #[derive(Clone)] would
+// require T to be Clone, too.
 impl<T> Clone for Observer<T> {
     fn clone(&self) -> Self {
         Self {
@@ -157,6 +170,15 @@ impl<T> Clone for Observer<T> {
         }
     }
 }
+
+impl<T> PartialEq for Observer<T> {
+    fn eq(&self, other: &Self) -> bool {
+        let Self { tx } = self;
+        tx.same_channel(&other.tx)
+    }
+}
+
+impl<T> Eq for Observer<T> {}
 
 #[derive(Debug)]
 pub struct Subscriber<T> {
@@ -213,6 +235,15 @@ impl<T> Clone for Subscriber<T> {
         Self { rx: rx.clone() }
     }
 }
+
+impl<T> PartialEq for Subscriber<T> {
+    fn eq(&self, other: &Self) -> bool {
+        let Self { rx } = self;
+        rx.same_channel(&other.rx)
+    }
+}
+
+impl<T> Eq for Subscriber<T> {}
 
 #[cfg(test)]
 mod tests {
