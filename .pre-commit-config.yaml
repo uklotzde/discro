@@ -42,12 +42,12 @@ repos:
       - id: gitleaks
   # Audit GitHub Actions CI/CD setups.
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.10.0
+    rev: v1.11.0
     hooks:
       - id: zizmor
   # JSON
   - repo: https://github.com/sirosen/check-jsonschema
-    rev: 0.33.1
+    rev: 0.33.2
     hooks:
       - id: check-github-actions
       - id: check-github-workflows
