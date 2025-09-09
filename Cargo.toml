@@ -10,23 +10,24 @@ readme = "README.md"
 repository = "https://github.com/uklotzde/discro"
 keywords = ["async", "await", "reactive", "observable", "synchronization"]
 categories = ["asynchronous", "concurrency"]
-rust-version = "1.85"
+# Keep rust-version in sync with `.github/workflows/audit-dependencies.yaml`.
+rust-version = "1.89"
 edition = "2024"
 include = ["README.md", "LICENSES/", "src/"]
 
 [dependencies]
 async-stream = { version = "0.3.6", optional = true }
 futures-core = { version = "0.3.31", optional = true, default-features = false }
-thiserror = "2.0.12"
+thiserror = "2.0.16"
 
 [dependencies.tokio]
-version = "1.45.1"
+version = "1.47.1"
 optional = true
 default-features = false
 features = ["sync"]
 
 [dev-dependencies.tokio]
-version = "1.45.1"
+version = "1.47.1"
 features = ["macros", "rt", "time"]
 
 [features]
