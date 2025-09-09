@@ -8,7 +8,7 @@ default_stages:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-case-conflict
       - id: check-json
@@ -37,17 +37,17 @@ repos:
         args: [--ignore-words=.codespellignore]
   # Check for hardcoded and leaked secrets.
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.27.2
+    rev: v8.28.0
     hooks:
       - id: gitleaks
   # Audit GitHub Actions CI/CD setups.
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.11.0
+    rev: v1.12.1
     hooks:
       - id: zizmor
   # JSON
   - repo: https://github.com/sirosen/check-jsonschema
-    rev: 0.33.2
+    rev: 0.33.3
     hooks:
       - id: check-github-actions
       - id: check-github-workflows
