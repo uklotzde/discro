@@ -16,13 +16,13 @@ where
     S: Send + Sync,
     T: Send,
 {
-    async_stream::stream! {
+    asynk_strim::stream_fn(|mut yielder| async move {
         let next_item_fn = &mut next_item_fn;
         #[expect(clippy::while_let_loop)]
         loop {
             match subscriber.map_changed(|next| next_item_fn(next)).await {
                 Ok(next_item) => {
-                    yield next_item
+                    yielder.yield_item(next_item).await;
                 }
                 Err(OrphanedSubscriberError) => {
                     // Stream exhausted after publisher disappeared.
@@ -30,7 +30,7 @@ where
                 }
             }
         }
-    }
+    })
 }
 
 /// Observe modifications as a stream of changed values.
@@ -47,13 +47,16 @@ where
     S: Send + Sync,
     T: Send,
 {
-    async_stream::stream! {
+    asynk_strim::stream_fn(|mut yielder| async move {
         let next_item_fn = &mut next_item_fn;
         #[expect(clippy::while_let_loop)]
         loop {
-            match subscriber.filter_map_changed(|next| next_item_fn(next)).await {
+            match subscriber
+                .filter_map_changed(|next| next_item_fn(next))
+                .await
+            {
                 Ok(next_item) => {
-                    yield next_item
+                    yielder.yield_item(next_item).await;
                 }
                 Err(OrphanedSubscriberError) => {
                     // Stream exhausted after publisher disappeared.
@@ -61,5 +64,5 @@ where
                 }
             }
         }
-    }
+    })
 }
