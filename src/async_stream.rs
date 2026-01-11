@@ -8,6 +8,13 @@ use crate::{OrphanedSubscriberError, Subscriber};
 /// Returns a stream of changed values.
 ///
 /// The `next_item_fn` closure is invoked on a borrowed value while the lock is held.
+///
+/// # Panics
+///
+/// Uses [`asynk-strim`](https://crates.io/crates/asynk-strim) and may panic at runtime
+/// if the waker is already wrapped.
+///
+/// Please refer to <https://docs.rs/asynk-strim/latest/asynk_strim/#-important> for details.
 pub fn subscriber_into_changed_stream<S, T>(
     mut subscriber: Subscriber<S>,
     mut next_item_fn: impl FnMut(&S) -> T + Send,
@@ -39,6 +46,13 @@ where
 /// `next_item_fn` returns `Some`.
 ///
 /// The `next_item_fn` closure is invoked on a borrowed value while the lock is held.
+///
+/// # Panics
+///
+/// Uses [`asynk-strim`](https://crates.io/crates/asynk-strim) and may panic at runtime
+/// if the waker is already wrapped.
+///
+/// Please refer to <https://docs.rs/asynk-strim/latest/asynk_strim/#-important> for details.
 pub fn subscriber_into_changed_stream_filtered<S, T>(
     mut subscriber: Subscriber<S>,
     mut next_item_fn: impl FnMut(&S) -> Option<T> + Send,
