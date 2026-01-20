@@ -8,6 +8,13 @@ use crate::{OrphanedSubscriberError, Subscriber};
 /// Returns a stream of changed values.
 ///
 /// The `next_item_fn` closure is invoked on a borrowed value while the lock is held.
+///
+/// # Panics
+///
+/// Uses [`asynk-strim`](https://crates.io/crates/asynk-strim) and may panic at runtime
+/// if the waker is already wrapped.
+///
+/// Please refer to <https://docs.rs/asynk-strim/latest/asynk_strim/#-important> for details.
 pub fn subscriber_into_changed_stream<S, T>(
     mut subscriber: Subscriber<S>,
     mut next_item_fn: impl FnMut(&S) -> T + Send,
@@ -16,13 +23,13 @@ where
     S: Send + Sync,
     T: Send,
 {
-    async_stream::stream! {
+    asynk_strim::stream_fn(|mut yielder| async move {
         let next_item_fn = &mut next_item_fn;
         #[expect(clippy::while_let_loop)]
         loop {
             match subscriber.map_changed(|next| next_item_fn(next)).await {
                 Ok(next_item) => {
-                    yield next_item
+                    yielder.yield_item(next_item).await;
                 }
                 Err(OrphanedSubscriberError) => {
                     // Stream exhausted after publisher disappeared.
@@ -30,7 +37,7 @@ where
                 }
             }
         }
-    }
+    })
 }
 
 /// Observe modifications as a stream of changed values.
@@ -39,6 +46,13 @@ where
 /// `next_item_fn` returns `Some`.
 ///
 /// The `next_item_fn` closure is invoked on a borrowed value while the lock is held.
+///
+/// # Panics
+///
+/// Uses [`asynk-strim`](https://crates.io/crates/asynk-strim) and may panic at runtime
+/// if the waker is already wrapped.
+///
+/// Please refer to <https://docs.rs/asynk-strim/latest/asynk_strim/#-important> for details.
 pub fn subscriber_into_changed_stream_filtered<S, T>(
     mut subscriber: Subscriber<S>,
     mut next_item_fn: impl FnMut(&S) -> Option<T> + Send,
@@ -47,13 +61,16 @@ where
     S: Send + Sync,
     T: Send,
 {
-    async_stream::stream! {
+    asynk_strim::stream_fn(|mut yielder| async move {
         let next_item_fn = &mut next_item_fn;
         #[expect(clippy::while_let_loop)]
         loop {
-            match subscriber.filter_map_changed(|next| next_item_fn(next)).await {
+            match subscriber
+                .filter_map_changed(|next| next_item_fn(next))
+                .await
+            {
                 Ok(next_item) => {
-                    yield next_item
+                    yielder.yield_item(next_item).await;
                 }
                 Err(OrphanedSubscriberError) => {
                     // Stream exhausted after publisher disappeared.
@@ -61,5 +78,5 @@ where
                 }
             }
         }
-    }
+    })
 }
