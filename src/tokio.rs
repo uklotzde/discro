@@ -200,6 +200,20 @@ impl<T> Subscriber<T> {
         Ref(self.rx.borrow_and_update())
     }
 
+    pub async fn read_filtered<F>(
+        &mut self,
+        filter_fn: F,
+    ) -> Result<Ref<'_, T>, OrphanedSubscriberError>
+    where
+        F: FnMut(&T) -> bool,
+    {
+        self.rx
+            .wait_for(filter_fn)
+            .await
+            .map(Ref)
+            .map_err(|_| OrphanedSubscriberError)
+    }
+
     pub fn mark_changed(&mut self) {
         self.rx.mark_changed();
     }
