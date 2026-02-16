@@ -209,13 +209,12 @@ impl<T> Clone for Observer<T> {
 /// [`mark_changed()`](Self::mark_changed) to explicitly mark the current
 /// value as _changed_ or reset it to _unchanged_ by calling
 /// [`read_ack()`](Self::read_ack).
-#[allow(missing_debug_implementations)]
 pub struct Subscriber<T> {
     phantom: PhantomData<T>,
 }
 
 impl<T> Subscriber<T> {
-    /// Read the current value
+    /// Reads the current value.
     ///
     /// The current value is considered as _unseen_ until accessing it.
     /// with [`read_ack()`](Self::read_ack).
@@ -227,7 +226,7 @@ impl<T> Subscriber<T> {
         unimplemented!()
     }
 
-    /// Read and acknowledge the current value
+    /// Reads and acknowledges the current value.
     ///
     /// The current value is marked as _seen_ and therefore considered
     /// as _unchanged_ from now on.
@@ -236,6 +235,22 @@ impl<T> Subscriber<T> {
     /// again while already holding a read lock might cause a deadlock!
     #[must_use]
     pub fn read_ack(&mut self) -> Ref<T> {
+        unimplemented!()
+    }
+
+    /// Reads the first value that satisfies the filter condition.
+    ///
+    /// Applies the given filter function to the current value and all
+    /// subsequent observed values. Returns a reference to the first value
+    /// for which `filter_fn` returned `true`.
+    #[expect(unused_variables, clippy::unused_async)]
+    pub async fn read_filtered<F>(
+        &mut self,
+        filter_fn: F,
+    ) -> Result<Ref<T>, OrphanedSubscriberError>
+    where
+        F: FnMut(&T) -> bool,
+    {
         unimplemented!()
     }
 
@@ -256,7 +271,7 @@ impl<T> Subscriber<T> {
     /// # Errors
     ///
     /// Returns `Err(OrphanedSubscriberError)` if the subscriber is disconnected from the publisher.
-    #[allow(clippy::unused_async)]
+    #[expect(clippy::unused_async)]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
         unimplemented!()
     }
@@ -268,7 +283,7 @@ impl<T> Subscriber<T> {
     /// # Errors
     ///
     /// Returns an error if the publisher has been dropped.
-    #[allow(clippy::unused_async)]
+    #[expect(clippy::unused_async)]
     pub async fn read_changed(&mut self) -> Result<Ref<T>, OrphanedSubscriberError> {
         unimplemented!()
     }

@@ -73,6 +73,11 @@ where
     fn read_ack(&'r mut self) -> R;
 
     // TODO: How to implement this async fn properly?
+    // async fn read_filtered<F>(&mut self, filter_fn: F) -> Result<R, OrphanedSubscriberError>
+    // where
+    //     F: FnMut(&T) -> bool;
+
+    // TODO: How to implement this async fn properly?
     // async fn read_changed(&'r mut self) -> Result<R, OrphanedSubscriberError>;
 
     // TODO: How to define and implement this async fn properly?
