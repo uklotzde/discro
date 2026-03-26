@@ -8,3 +8,9 @@ rules:
       - audit-dependencies.yaml
       - pre-commit.yaml
       - test.yaml
+
+  superfluous-actions:
+    # TODO: Replace obsolete actions.
+    ignore:
+      - pre-commit.yaml:37:15
+      - test.yaml:32:15

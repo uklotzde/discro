@@ -209,6 +209,7 @@ impl<T> Clone for Observer<T> {
 /// [`mark_changed()`](Self::mark_changed) to explicitly mark the current
 /// value as _changed_ or reset it to _unchanged_ by calling
 /// [`read_ack()`](Self::read_ack).
+#[allow(missing_debug_implementations)]
 pub struct Subscriber<T> {
     phantom: PhantomData<T>,
 }
