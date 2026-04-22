@@ -25,13 +25,13 @@ thiserror = "2.0.18"
 asynk-strim = { version = "0.1.5", optional = true }
 
 [dependencies.tokio]
-version = "1.50.0"
+version = "1.52.1"
 optional = true
 default-features = false
 features = ["sync"]
 
 [dev-dependencies.tokio]
-version = "1.50.0"
+version = "1.52.1"
 features = ["macros", "rt", "time"]
 
 [features]
