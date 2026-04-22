@@ -11,7 +11,7 @@ repository = "https://github.com/uklotzde/discro"
 keywords = ["async", "await", "reactive", "observable", "synchronization"]
 categories = ["asynchronous", "concurrency"]
 # Keep rust-version in sync with `.github/workflows/audit-dependencies.yaml`.
-rust-version = "1.94"
+rust-version = "1.95"
 edition = "2024"
 include = ["README.md", "LICENSES/", "src/"]
 
