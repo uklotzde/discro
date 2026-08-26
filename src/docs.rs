@@ -244,7 +244,7 @@ impl<T> Subscriber<T> {
     /// Applies the given filter function to the current value and all
     /// subsequent observed values. Returns a reference to the first value
     /// for which `filter_fn` returned `true`.
-    #[expect(unused_variables, clippy::unused_async)]
+    #[expect(unused_variables)]
     pub async fn read_filtered<F>(
         &mut self,
         filter_fn: F,
@@ -272,7 +272,6 @@ impl<T> Subscriber<T> {
     /// # Errors
     ///
     /// Returns `Err(OrphanedSubscriberError)` if the subscriber is disconnected from the publisher.
-    #[expect(clippy::unused_async)]
     pub async fn changed(&mut self) -> Result<(), OrphanedSubscriberError> {
         unimplemented!()
     }
@@ -284,7 +283,6 @@ impl<T> Subscriber<T> {
     /// # Errors
     ///
     /// Returns an error if the publisher has been dropped.
-    #[expect(clippy::unused_async)]
     pub async fn read_changed(&mut self) -> Result<Ref<T>, OrphanedSubscriberError> {
         unimplemented!()
     }
