@@ -47,7 +47,7 @@ impl ModifiedStatus for bool {
 #[error("disconnected from publisher")]
 pub struct OrphanedSubscriberError;
 
-pub(crate) mod subscriber;
+mod subscriber;
 
 #[cfg(feature = "tokio")]
 mod tokio;
