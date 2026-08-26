@@ -49,6 +49,12 @@ pub struct OrphanedSubscriberError;
 
 mod subscriber;
 
+mod subscription;
+pub use self::subscription::{
+    SubscriptionHandle, SubscriptionObserver, SubscriptionPublisher, SubscriptionRegistry,
+    SubscriptionState,
+};
+
 #[cfg(feature = "tokio")]
 mod tokio;
 
